@@ -5,6 +5,7 @@ use renderer::{
     context::RenderContext,
     shuffler::ShufflingRenderer,
     space::{draw_space, SpaceStyle},
+    Color,
 };
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
@@ -46,7 +47,7 @@ fn main() -> Result<(), Error> {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         PixelsBuilder::new(WIDTH, HEIGHT, surface_texture)
-            .render_texture_format(TextureFormat::Bgra8UnormSrgb)
+            .surface_texture_format(TextureFormat::Bgra8UnormSrgb)
             .build()?
     };
     let shuffling_renderer = ShufflingRenderer::new(&pixels, WIDTH, HEIGHT);
@@ -143,9 +144,14 @@ fn draw(
         ..
     }: &mut State,
 ) -> Result<(), Error> {
-    renderer.set_source_rgb(0.0, 0.0, 1.0);
+    renderer.set_source_color(&Color::from_hex_rgb(0xF7F7F8));
     renderer.paint()?;
 
+    renderer.save()?;
+    renderer.translate(renderer.width / 2.0, renderer.height / 2.0);
+    renderer.scale(200.0, 200.0);
     draw_space(renderer, space, space_style)?;
+    renderer.restore()?;
+
     Ok(())
 }
