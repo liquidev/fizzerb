@@ -1,0 +1,20 @@
+[package]
+name = "fizzerb"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["fizzerb-model"]
+
+[dependencies]
+cairo-rs = "0.14.9"
+cpal = "0.14.0"
+env_logger = "0.9.1"
+log = "0.4.17"
+pixels = { git = "https://github.com/parasyte/pixels", rev = "9c3edeb" }
+rayon = "1.5.3"
+thiserror = "1.0.36"
+winit = "0.27.3"
+
+fizzerb-model = { path = "fizzerb-model" }
+bytemuck = "1.12.1"
