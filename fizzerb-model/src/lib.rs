@@ -1,8 +1,10 @@
 //! Data types for describing spaces.
 
+pub mod math;
+
 pub extern crate glam;
 
-use glam::Vec2;
+use glam::{vec2, Vec2};
 
 /// A wall made up of a material.
 #[derive(Debug, Clone, Copy)]
@@ -10,6 +12,20 @@ pub struct Wall {
     pub start: Vec2,
     pub end: Vec2,
     pub material: MaterialIndex,
+}
+
+impl Wall {
+    /// Returns the normal vector of this wall.
+    pub fn normal(&self) -> Vec2 {
+        let direction = (self.end - self.start).normalize();
+        vec2(-direction.y, direction.x)
+    }
+
+    /// Reflects a ray facing the given `direction` against this wall and returns the reflected ray.
+    pub fn reflect(&self, direction: Vec2) -> Vec2 {
+        let normal = self.normal();
+        math::reflect(direction, normal)
+    }
 }
 
 /// Definition of a wall material.
@@ -43,6 +59,18 @@ pub struct Microphone {
     pub position: Vec2,
 }
 
+/// Index of a wall inside the room.
+#[derive(Debug, Clone, Copy)]
+pub struct WallIndex(pub usize);
+
+/// Index of a speaker inside the room.
+#[derive(Debug, Clone, Copy)]
+pub struct SpeakerIndex(pub usize);
+
+/// Index of a microphone inside the room.
+#[derive(Debug, Clone, Copy)]
+pub struct MicrophoneIndex(pub usize);
+
 /// Index of a material inside the room.
 #[derive(Debug, Clone, Copy)]
 pub struct MaterialIndex(pub usize);
@@ -61,8 +89,10 @@ impl Space {
         Default::default()
     }
 
-    pub fn add_wall(&mut self, wall: Wall) {
+    pub fn add_wall(&mut self, wall: Wall) -> WallIndex {
+        let index = self.walls.len();
         self.walls.push(wall);
+        WallIndex(index)
     }
 
     pub fn add_walls(&mut self, walls: impl Iterator<Item = Wall>) {
@@ -75,12 +105,16 @@ impl Space {
         MaterialIndex(index)
     }
 
-    pub fn add_speaker(&mut self, speaker: Speaker) {
+    pub fn add_speaker(&mut self, speaker: Speaker) -> SpeakerIndex {
+        let index = self.speakers.len();
         self.speakers.push(speaker);
+        SpeakerIndex(index)
     }
 
-    pub fn add_microphone(&mut self, microphone: Microphone) {
+    pub fn add_microphone(&mut self, microphone: Microphone) -> MicrophoneIndex {
+        let index = self.microphones.len();
         self.microphones.push(microphone);
+        MicrophoneIndex(index)
     }
 }
 

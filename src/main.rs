@@ -1,15 +1,21 @@
 use error::Error;
-use fizzerb_model::{glam::vec2, walls, Material, Microphone, Space, Speaker};
+use fizzerb_model::{
+    glam::vec2, walls, Material, Microphone, MicrophoneIndex, Space, Speaker, SpeakerIndex,
+};
+use fizzerb_tracer::{Recording, Tracer, TracerConfig, SPEED_OF_SOUND_IN_AIR};
+use glam::Vec2;
 use pixels::{wgpu::TextureFormat, Pixels, PixelsBuilder, SurfaceTexture};
 use renderer::{
     context::RenderContext,
+    recording::{RecordingRenderer, RecordingStyle},
     shuffler::ShufflingRenderer,
-    space::{draw_space, SpaceStyle},
+    space::{SpaceRenderer, SpaceStyle},
+    transform::Transform,
     Color,
 };
 use winit::{
     dpi::{LogicalSize, PhysicalSize},
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
@@ -22,12 +28,16 @@ const HEIGHT: u32 = 720;
 
 struct State {
     space: Space,
+    trace_recording: Option<Recording>,
+    speaker: SpeakerIndex,
+    microphone: MicrophoneIndex,
 
     window: Window,
     pixels: Pixels,
     shuffling_renderer: ShufflingRenderer,
     renderer: RenderContext,
     space_style: SpaceStyle,
+    recording_style: RecordingStyle,
 }
 
 fn main() -> Result<(), Error> {
@@ -61,22 +71,28 @@ fn main() -> Result<(), Error> {
         roughness: 0.0,
     });
     space.add_walls(walls::make_box(vec2(-1.0, -1.0), vec2(2.0, 2.0), material));
-    space.add_speaker(Speaker {
+    let speaker = space.add_speaker(Speaker {
         position: vec2(-0.5, 0.5),
     });
-    space.add_microphone(Microphone {
+    let microphone = space.add_microphone(Microphone {
         position: vec2(0.5, -0.5),
     });
 
     let space_style = SpaceStyle::default();
+    let recording_style = RecordingStyle::default();
 
     let mut state = State {
         space,
+        trace_recording: None,
+        speaker,
+        microphone,
+
         window,
         pixels,
         shuffling_renderer,
         renderer,
         space_style,
+        recording_style,
     };
 
     event_loop.run(move |event, _, control_flow| {
@@ -124,6 +140,18 @@ fn event_loop_inner(
                     )?
                 };
             }
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => match keycode {
+                VirtualKeyCode::Space => state.retrace(),
+                _ => (),
+            },
             WindowEvent::CloseRequested => {
                 *control_flow = ControlFlow::Exit;
             }
@@ -139,19 +167,53 @@ fn event_loop_inner(
 fn draw(
     State {
         renderer,
+        trace_recording,
         space,
         space_style,
+        recording_style,
         ..
     }: &mut State,
 ) -> Result<(), Error> {
     renderer.set_source_color(&Color::from_hex_rgb(0xF7F7F8));
     renderer.paint()?;
 
-    renderer.save()?;
-    renderer.translate(renderer.width / 2.0, renderer.height / 2.0);
-    renderer.scale(200.0, 200.0);
-    draw_space(renderer, space, space_style)?;
-    renderer.restore()?;
+    let transform = Transform {
+        pan: vec2(0.0, 0.0),
+        zoom: 200.0,
+    };
+
+    if let Some(recording) = trace_recording {
+        RecordingRenderer {
+            recording,
+            transform: &transform,
+            style: recording_style,
+        }
+        .draw(renderer)?;
+    }
+
+    SpaceRenderer {
+        space,
+        style: space_style,
+        transform: &transform,
+    }
+    .draw(renderer)?;
 
     Ok(())
+}
+
+impl State {
+    fn retrace(&mut self) {
+        let mut tracer = Tracer::new(
+            &self.space,
+            &TracerConfig {
+                speed_of_sound: SPEED_OF_SOUND_IN_AIR,
+                max_bounces: 1000,
+                record_rays: true,
+            },
+        );
+        let angle = fastrand::f32() * 2.0 * std::f32::consts::PI;
+        let start_ray = Vec2::from_angle(angle);
+        let recording = tracer.perform_trace(self.microphone, self.speaker, start_ray);
+        self.trace_recording = Some(recording);
+    }
 }

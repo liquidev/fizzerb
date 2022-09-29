@@ -4,17 +4,29 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["fizzerb-model"]
+members = [
+    "fizzerb-model",
+    "fizzerb-tracer"
+]
+
+[workspace.dependencies]
+fizzerb-model = { path = "fizzerb-model" }
+fizzerb-tracer = { path = "fizzerb-tracer" }
+glam = "0.21.3"
+log = "0.4.17"
+thiserror = "1.0.36"
+fastrand = "1.8.0"
 
 [dependencies]
+bytemuck = "1.12.1"
 cairo-rs = "0.14.9"
-cpal = "0.14.0"
 env_logger = "0.9.1"
-log = "0.4.17"
+fastrand = { workspace = true }
+fizzerb-model = { workspace = true }
+fizzerb-tracer = { workspace = true }
+glam = { workspace = true }
+log = { workspace = true }
 pixels = { git = "https://github.com/parasyte/pixels", rev = "9c3edeb" }
-rayon = "1.5.3"
-thiserror = "1.0.36"
+thiserror = { workspace = true }
 winit = "0.27.3"
 
-fizzerb-model = { path = "fizzerb-model" }
-bytemuck = "1.12.1"

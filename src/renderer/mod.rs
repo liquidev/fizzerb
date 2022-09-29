@@ -1,8 +1,10 @@
 pub mod context;
+pub mod recording;
 pub mod shuffler;
 pub mod space;
+pub mod transform;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     pub r: f64,
     pub g: f64,

@@ -1,0 +1,10 @@
+[package]
+name = "fizzerb-tracer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fizzerb-model = { workspace = true }
+glam = { workspace = true }
+fastrand = { workspace = true }
+log = { workspace = true }
