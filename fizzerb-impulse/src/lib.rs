@@ -2,10 +2,8 @@
 
 mod compressor;
 
-use compressor::Compressor;
+pub use compressor::Compressor;
 use fizzerb_model::Response;
-
-pub use compressor::CompressorConfig;
 
 #[derive(Debug, Clone)]
 pub struct ImpulseRenderer {
@@ -29,8 +27,8 @@ impl ImpulseRenderer {
         assert!(response.time > 0.0);
 
         let position = (response.time / self.sample_period) as usize;
-        self.audio_buffer[position] += response.loudness;
-        self.audio_buffer[position + 1] -= response.loudness;
+        let positive = response.bounces % 2 == 0;
+        self.audio_buffer[position] += response.loudness * if positive { 1.0 } else { -1.0 };
     }
 
     /// Adds the given bounce responses into the audio buffer.
@@ -62,7 +60,7 @@ impl ImpulseRenderer {
     }
 
     /// Renders the audio buffer into a finished sample.
-    pub fn render(&self, gain: f32, compressor_config: CompressorConfig) -> Vec<f32> {
+    pub fn render(&self, gain: f32, compressor: Compressor) -> Vec<f32> {
         let mut output = self.audio_buffer.clone();
         let truncated_length = (!output.is_empty())
             .then(|| output.iter().rposition(|&x| x > 0.00001))
@@ -76,14 +74,8 @@ impl ImpulseRenderer {
             *sample *= gain;
         }
 
-        let compressor = Compressor::new(compressor_config);
         compressor.run(&input[..truncated_length], &mut output);
 
         output
     }
-}
-
-/// The loudness mapping function.
-fn loudness(x: f32) -> f32 {
-    2.0 * (1.0 / (1.0 + std::f32::consts::E.powf(-5.0 * x)) - 0.5)
 }

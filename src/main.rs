@@ -1,5 +1,5 @@
 use error::Error;
-use fizzerb_impulse::{CompressorConfig, ImpulseRenderer};
+use fizzerb_impulse::{Compressor, ImpulseRenderer};
 use fizzerb_model::{
     glam::vec2, walls, Material, Microphone, MicrophoneIndex, Space, Speaker, SpeakerIndex,
 };
@@ -162,6 +162,7 @@ fn event_loop_inner(
                     },
                 ..
             } => match keycode {
+                VirtualKeyCode::Q => *control_flow = ControlFlow::Exit,
                 VirtualKeyCode::Space => state.retrace(),
                 _ => (),
             },
@@ -181,7 +182,6 @@ fn draw(
     State {
         renderer,
         trace_recording,
-        rendered_impulse,
         space,
         space_style,
         recording_style,
@@ -240,7 +240,7 @@ impl State {
                     &TracerConfig {
                         speed_of_sound: SPEED_OF_SOUND_IN_AIR,
                         max_bounces: 1024,
-                        record_rays: false,
+                        record_rays: true,
                     },
                 );
                 let angle = fastrand::f32() * 2.0 * std::f32::consts::PI;
@@ -255,9 +255,9 @@ impl State {
 
         self.rendered_impulse = self.impulse_renderer.render(
             1.0,
-            CompressorConfig {
+            Compressor {
                 sample_rate: SAMPLE_RATE as f32,
-                threshold: 1.0,
+                threshold: 0.8,
                 release: 2.0,
             },
         );

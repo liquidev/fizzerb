@@ -11,6 +11,7 @@ use glam::{vec2, Vec2};
 pub struct Response {
     pub time: f32,
     pub loudness: f32,
+    pub bounces: usize,
 }
 
 /// A wall made up of a material.
