@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use fizzerb_model::{glam::Vec2, Space};
+use fizzerb_model::Space;
 
 use crate::error::Error;
 

@@ -9,4 +9,7 @@ pub enum Error {
     Cairo(#[from] cairo::Error),
     #[error("Cairo borrow error: {0}")]
     CairoBorrow(#[from] cairo::BorrowError),
+
+    #[error("WAV error: {0}")]
+    Hound(#[from] hound::Error),
 }

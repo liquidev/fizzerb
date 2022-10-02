@@ -1,11 +1,6 @@
-use crate::{ray::Ray, RayHit, WallHit};
+use fizzerb_model::Response;
 
-/// An impulse response.
-#[derive(Debug, Clone)]
-pub struct Response {
-    pub time: f32,
-    pub loudness: f32,
-}
+use crate::{ray::Ray, RayHit};
 
 /// What a ray is for.
 #[derive(Debug, Clone, Copy)]

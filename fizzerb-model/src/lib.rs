@@ -6,6 +6,13 @@ pub extern crate glam;
 
 use glam::{vec2, Vec2};
 
+/// An impulse response traced from a single bounce.
+#[derive(Debug, Clone, Copy)]
+pub struct Response {
+    pub time: f32,
+    pub loudness: f32,
+}
+
 /// A wall made up of a material.
 #[derive(Debug, Clone, Copy)]
 pub struct Wall {
@@ -51,6 +58,7 @@ impl Default for Material {
 #[derive(Debug, Clone)]
 pub struct Speaker {
     pub position: Vec2,
+    pub power: f32,
 }
 
 /// A microphone that registers impulses from speakers.

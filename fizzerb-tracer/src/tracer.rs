@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use fizzerb_model::{MicrophoneIndex, Space, Speaker, SpeakerIndex, WallIndex};
+use fizzerb_model::{MicrophoneIndex, Response, Space, Speaker, SpeakerIndex, WallIndex};
 use glam::Vec2;
 
 use crate::{
@@ -50,7 +50,14 @@ impl<'r> Tracer<'r> {
 
         log::debug!("tracing from {microphone_index:?} to {speaker_index:?}");
 
-        let mut recorded_rays = vec![];
+        let inv_speed_of_sound = 1.0 / self.config.speed_of_sound;
+
+        let mut responses = Vec::with_capacity(self.config.max_bounces);
+        let mut recorded_rays = if self.config.record_rays {
+            Vec::with_capacity(self.config.max_bounces * 2)
+        } else {
+            vec![]
+        };
         let mut ray = Ray {
             start: microphone.position,
             direction: start_ray,
@@ -58,11 +65,13 @@ impl<'r> Tracer<'r> {
         let mut distance_bounced = 0.0_f32;
         for _i in 0..(self.config.max_bounces + 1) {
             if let Some(hit) = trace_to_walls(ray, self.space) {
-                recorded_rays.push(RecordedRay {
-                    purpose: RayPurpose::Bounce,
-                    ray,
-                    hit: hit.ray,
-                });
+                if self.config.record_rays {
+                    recorded_rays.push(RecordedRay {
+                        purpose: RayPurpose::Bounce,
+                        ray,
+                        hit: hit.ray,
+                    });
+                }
 
                 let wall = &self.space.walls[hit.wall.0];
                 let reflected = wall.reflect(ray.direction);
@@ -73,14 +82,21 @@ impl<'r> Tracer<'r> {
                 distance_bounced += hit.ray.ray_length;
 
                 if let Some(trace) = trace_to_speaker(ray.start, self.space, speaker) {
-                    recorded_rays.push(RecordedRay {
-                        purpose: RayPurpose::Trace,
-                        ray: trace.ray,
-                        hit: RayHit {
-                            position: speaker.position,
-                            ray_length: trace.distance_to_speaker,
-                        },
-                    });
+                    if self.config.record_rays {
+                        recorded_rays.push(RecordedRay {
+                            purpose: RayPurpose::Trace,
+                            ray: trace.ray,
+                            hit: RayHit {
+                                position: speaker.position,
+                                ray_length: trace.distance_to_speaker,
+                            },
+                        });
+                    }
+
+                    let distance_travelled = distance_bounced + trace.distance_to_speaker;
+                    let time = inv_speed_of_sound * distance_travelled;
+                    let loudness = speaker.power / (distance_travelled * distance_travelled);
+                    responses.push(Response { time, loudness });
                 }
             } else {
                 log::trace!("empty space hit, finishing off");
@@ -92,7 +108,7 @@ impl<'r> Tracer<'r> {
         log::debug!("tracing took {:?}", end - start);
 
         Recording {
-            responses: vec![],
+            responses,
             rays: recorded_rays,
         }
     }

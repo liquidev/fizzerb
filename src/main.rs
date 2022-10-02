@@ -1,10 +1,13 @@
 use error::Error;
+use fizzerb_impulse::{CompressorConfig, ImpulseRenderer};
 use fizzerb_model::{
     glam::vec2, walls, Material, Microphone, MicrophoneIndex, Space, Speaker, SpeakerIndex,
 };
 use fizzerb_tracer::{Recording, Tracer, TracerConfig, SPEED_OF_SOUND_IN_AIR};
 use glam::Vec2;
+use hound::{SampleFormat, WavSpec, WavWriter};
 use pixels::{wgpu::TextureFormat, Pixels, PixelsBuilder, SurfaceTexture};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use renderer::{
     context::RenderContext,
     recording::{RecordingRenderer, RecordingStyle},
@@ -23,14 +26,18 @@ use winit::{
 mod error;
 mod renderer;
 
-const WIDTH: u32 = 1280;
-const HEIGHT: u32 = 720;
+const WIDTH: u32 = 600;
+const HEIGHT: u32 = 600;
+
+const SAMPLE_RATE: u32 = 48000;
 
 struct State {
     space: Space,
     trace_recording: Option<Recording>,
     speaker: SpeakerIndex,
     microphone: MicrophoneIndex,
+    impulse_renderer: ImpulseRenderer,
+    rendered_impulse: Vec<f32>,
 
     window: Window,
     pixels: Pixels,
@@ -70,22 +77,28 @@ fn main() -> Result<(), Error> {
         diffuse: 1.0,
         roughness: 0.0,
     });
-    space.add_walls(walls::make_box(vec2(-1.0, -1.0), vec2(2.0, 2.0), material));
+    let room_size = vec2(10.0, 10.0);
+    space.add_walls(walls::make_box(-room_size / 2.0, room_size, material));
     let speaker = space.add_speaker(Speaker {
-        position: vec2(-0.5, 0.5),
+        position: room_size / 3.0,
+        power: 10.0,
     });
     let microphone = space.add_microphone(Microphone {
-        position: vec2(0.5, -0.5),
+        position: -room_size / 3.0,
     });
+
+    let impulse_renderer = ImpulseRenderer::new(SAMPLE_RATE as f32);
 
     let space_style = SpaceStyle::default();
     let recording_style = RecordingStyle::default();
 
     let mut state = State {
         space,
+        impulse_renderer,
         trace_recording: None,
         speaker,
         microphone,
+        rendered_impulse: vec![],
 
         window,
         pixels,
@@ -168,6 +181,7 @@ fn draw(
     State {
         renderer,
         trace_recording,
+        rendered_impulse,
         space,
         space_style,
         recording_style,
@@ -177,9 +191,24 @@ fn draw(
     renderer.set_source_color(&Color::from_hex_rgb(0xF7F7F8));
     renderer.paint()?;
 
+    // let waveform_height = renderer.height * 0.75;
+    // renderer.new_path();
+    // for (i, &sample) in rendered_impulse.iter().step_by(10).enumerate() {
+    //     let x = i as f64 / rendered_impulse.len() as f64 * renderer.width;
+    //     let y = renderer.height / 2.0 - sample as f64 * waveform_height;
+    //     if i == 0 {
+    //         renderer.move_to(x, y);
+    //     } else {
+    //         renderer.line_to(x, y);
+    //     }
+    // }
+    // renderer.set_line_width(1.0);
+    // renderer.set_source_color(&Color::from_hex_rgb(0xCDD3DA));
+    // renderer.stroke()?;
+
     let transform = Transform {
         pan: vec2(0.0, 0.0),
-        zoom: 200.0,
+        zoom: 50.0,
     };
 
     if let Some(recording) = trace_recording {
@@ -203,17 +232,57 @@ fn draw(
 
 impl State {
     fn retrace(&mut self) {
-        let mut tracer = Tracer::new(
-            &self.space,
-            &TracerConfig {
-                speed_of_sound: SPEED_OF_SOUND_IN_AIR,
-                max_bounces: 1000,
-                record_rays: true,
+        let recordings: Vec<_> = (0..1024)
+            .into_par_iter()
+            .map(|_| {
+                let mut tracer = Tracer::new(
+                    &self.space,
+                    &TracerConfig {
+                        speed_of_sound: SPEED_OF_SOUND_IN_AIR,
+                        max_bounces: 1024,
+                        record_rays: false,
+                    },
+                );
+                let angle = fastrand::f32() * 2.0 * std::f32::consts::PI;
+                let start_ray = Vec2::from_angle(angle);
+                tracer.perform_trace(self.microphone, self.speaker, start_ray)
+            })
+            .collect();
+        for recording in recordings {
+            self.impulse_renderer.add_responses(&recording.responses);
+            self.trace_recording = Some(recording);
+        }
+
+        self.rendered_impulse = self.impulse_renderer.render(
+            36.0,
+            CompressorConfig {
+                sample_rate: SAMPLE_RATE as f32,
+                threshold: 0.01,
+                release: 2.0,
             },
         );
-        let angle = fastrand::f32() * 2.0 * std::f32::consts::PI;
-        let start_ray = Vec2::from_angle(angle);
-        let recording = tracer.perform_trace(self.microphone, self.speaker, start_ray);
-        self.trace_recording = Some(recording);
+        Self::save_wav(&self.rendered_impulse);
+    }
+
+    fn save_wav(impulse_response: &[f32]) {
+        if let Err(error) = Self::save_wav_inner(impulse_response) {
+            log::error!("error saving WAV: {error}");
+        }
+    }
+
+    fn save_wav_inner(impulse_response: &[f32]) -> Result<(), Error> {
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: SAMPLE_RATE,
+            bits_per_sample: 32,
+            sample_format: SampleFormat::Float,
+        };
+        let mut writer = WavWriter::create("impulse_response.wav", spec)?;
+        for &sample in impulse_response {
+            // let sample = (sample * i16::MAX as f32) as i16;
+            writer.write_sample(sample)?;
+        }
+        writer.finalize()?;
+        Ok(())
     }
 }

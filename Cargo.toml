@@ -6,12 +6,14 @@ edition = "2021"
 [workspace]
 members = [
     "fizzerb-model",
-    "fizzerb-tracer"
+    "fizzerb-tracer",
+    "fizzerb-impulse",
 ]
 
 [workspace.dependencies]
 fizzerb-model = { path = "fizzerb-model" }
 fizzerb-tracer = { path = "fizzerb-tracer" }
+fizzerb-impulse = { path = "fizzerb-impulse" }
 glam = "0.21.3"
 log = "0.4.17"
 thiserror = "1.0.36"
@@ -24,9 +26,12 @@ env_logger = "0.9.1"
 fastrand = { workspace = true }
 fizzerb-model = { workspace = true }
 fizzerb-tracer = { workspace = true }
+fizzerb-impulse = { workspace = true }
 glam = { workspace = true }
 log = { workspace = true }
 pixels = { git = "https://github.com/parasyte/pixels", rev = "9c3edeb" }
 thiserror = { workspace = true }
 winit = "0.27.3"
+hound = "3.5.0"
+rayon = "1.5.3"
 
