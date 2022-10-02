@@ -254,10 +254,10 @@ impl State {
         }
 
         self.rendered_impulse = self.impulse_renderer.render(
-            36.0,
+            1.0,
             CompressorConfig {
                 sample_rate: SAMPLE_RATE as f32,
-                threshold: 0.01,
+                threshold: 1.0,
                 release: 2.0,
             },
         );

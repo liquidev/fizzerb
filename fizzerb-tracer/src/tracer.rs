@@ -95,7 +95,7 @@ impl<'r> Tracer<'r> {
 
                     let distance_travelled = distance_bounced + trace.distance_to_speaker;
                     let time = inv_speed_of_sound * distance_travelled;
-                    let loudness = speaker.power / (distance_travelled * distance_travelled);
+                    let loudness = speaker.power / distance_travelled;
                     responses.push(Response { time, loudness });
                 }
             } else {
