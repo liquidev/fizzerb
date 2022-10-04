@@ -2,14 +2,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Pixels error: {0}")]
-    Pixels(#[from] pixels::Error),
+    #[error("platform error: {0}")]
+    Platform(#[from] druid::PlatformError),
 
-    #[error("Cairo error: {0}")]
-    Cairo(#[from] cairo::Error),
-    #[error("Cairo borrow error: {0}")]
-    CairoBorrow(#[from] cairo::BorrowError),
+    #[error("i/o error: {0}")]
+    Io(#[from] std::io::Error),
 
-    #[error("WAV error: {0}")]
-    Hound(#[from] hound::Error),
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
 }

@@ -1,0 +1,75 @@
+{
+    "objects": [
+        {
+            "Wall": {
+                "start": {
+                    "x": -5,
+                    "y": -5
+                },
+                "end": {
+                    "x": -5,
+                    "y": 5
+                },
+                "material": 0
+            }
+        },
+        {
+            "Wall": {
+                "start": {
+                    "x": -5,
+                    "y": 5
+                },
+                "end": {
+                    "x": 5,
+                    "y": 5
+                },
+                "material": 0
+            }
+        },
+        {
+            "Wall": {
+                "start": {
+                    "x": 5,
+                    "y": 5
+                },
+                "end": {
+                    "x": 5,
+                    "y": -5
+                },
+                "material": 0
+            }
+        },
+        {
+            "Wall": {
+                "type": "wall",
+                "start": {
+                    "x": 5,
+                    "y": -5
+                },
+                "end": {
+                    "x": -5,
+                    "y": -5
+                },
+                "material": 0
+            }
+        },
+        {
+            "Microphone": {
+                "type": "microphone",
+                "position": {
+                    "x": -4,
+                    "y": 0
+                }
+            }
+        },
+        {
+            "Speaker": {
+                "type": "speaker",
+                "position": {
+                    "x": 4,
+                    "y": 0
+                }
+            }
+        }
+    ]
+}
