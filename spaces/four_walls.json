@@ -41,7 +41,6 @@
         },
         {
             "Wall": {
-                "type": "wall",
                 "start": {
                     "x": 5,
                     "y": -5
@@ -55,7 +54,6 @@
         },
         {
             "Microphone": {
-                "type": "microphone",
                 "position": {
                     "x": -4,
                     "y": 0
@@ -64,11 +62,11 @@
         },
         {
             "Speaker": {
-                "type": "speaker",
                 "position": {
                     "x": 4,
                     "y": 0
-                }
+                },
+                "power": 10
             }
         }
     ]

@@ -1,20 +1,33 @@
 use druid::{
-    widget::{Flex, Label},
-    AppLauncher, Widget, WindowDesc,
+    widget::{Container, Flex, Label, Padding, ZStack},
+    AppLauncher, Data, Lens, UnitPoint, Vec2, Widget, WidgetExt, WindowDesc,
 };
-use widgets::{SpaceEditor, SpaceEditorData};
+use widgets::{Button, SpaceEditor, SpaceEditorData};
 
 use crate::error::Error;
 
 mod error;
 #[macro_use]
 mod style;
+mod math;
 mod widgets;
 
-fn root() -> impl Widget<SpaceEditorData> {
-    Flex::column()
-        .with_child(Label::new("Twój stary pijany mode: ON"))
-        .with_flex_child(SpaceEditor::new(), 1.0)
+#[derive(Clone, Data, Lens)]
+pub struct RootData {
+    space_editor: SpaceEditorData,
+}
+
+fn root() -> impl Widget<RootData> {
+    ZStack::new(SpaceEditor::new().lens(RootData::space_editor)).with_aligned_child(
+        Padding::new(
+            style::WINDOW_PADDING,
+            Flex::row()
+                .with_child(Button::new("Render"))
+                .with_spacer(8.0)
+                .with_child(Button::new("Bye Egg")),
+        ),
+        UnitPoint::BOTTOM_RIGHT,
+    )
 }
 
 fn main() -> Result<(), Error> {
@@ -30,7 +43,9 @@ fn main() -> Result<(), Error> {
         .configure_env(|env, _| {
             style::configure_env(env).expect("cannot configure styles");
         })
-        .launch(SpaceEditorData::new(space))?;
+        .launch(RootData {
+            space_editor: SpaceEditorData::new(space),
+        })?;
 
     Ok(())
 }

@@ -1,6 +1,6 @@
 //! Styling keys.
 
-use druid::{Color, Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Key};
+use druid::{Color, Env, FontDescriptor, FontFamily, FontStyle, FontWeight, Insets, Key};
 
 use crate::{error::Error, widgets};
 
@@ -16,19 +16,26 @@ macro_rules! style_key {
     };
 }
 
-pub const FONT_REGULAR: Key<FontDescriptor> = style_key!("font.regular");
+pub const TEXT: Key<FontDescriptor> = style_key!("text");
+
+pub const WINDOW_PADDING: Key<Insets> = style_key!("window-padding");
 
 pub fn configure_env(env: &mut Env) -> Result<(), Error> {
+    env.set(druid::theme::TEXT_COLOR, color(0x071013));
+
     env.set(
-        FONT_REGULAR,
+        TEXT,
         FontDescriptor {
-            family: FontFamily::SANS_SERIF,
-            size: 14.0,
-            weight: FontWeight::REGULAR,
+            family: FontFamily::SYSTEM_UI,
+            size: 13.0,
+            weight: FontWeight::MEDIUM,
             style: FontStyle::Regular,
         },
     );
 
+    env.set(WINDOW_PADDING, 16.0);
+
+    widgets::button::style::configure_env(env);
     widgets::spaceeditor::style::configure_env(env);
 
     Ok(())
