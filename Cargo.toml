@@ -27,7 +27,7 @@ fizzerb-tracer = { workspace = true }
 fizzerb-impulse = { workspace = true }
 glam = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = "0.3.15"
+tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 thiserror = { workspace = true }
 hound = "3.5.0"
 rayon = "1.5.3"
