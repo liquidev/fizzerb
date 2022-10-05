@@ -17,8 +17,8 @@ pub struct Transform {
 
 #[derive(Clone, Data)]
 pub struct SpaceEditorData {
-    space: EditableSpace,
-    transform: Transform,
+    pub space: EditableSpace,
+    pub transform: Transform,
 }
 
 impl SpaceEditorData {

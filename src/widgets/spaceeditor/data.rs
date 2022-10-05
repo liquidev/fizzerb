@@ -78,3 +78,9 @@ impl EditableSpace {
         space
     }
 }
+
+impl Default for EditableSpace {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -1,6 +1,6 @@
 use druid::{
-    widget::{Container, Flex, Label, Padding, ZStack},
-    AppLauncher, Data, Lens, UnitPoint, Vec2, Widget, WidgetExt, WindowDesc,
+    widget::{Flex, Padding, ZStack},
+    AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
 use widgets::{Button, SpaceEditor, SpaceEditorData};
 
