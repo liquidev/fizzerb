@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 fizzerb-model = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }

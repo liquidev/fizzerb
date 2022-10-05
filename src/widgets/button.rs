@@ -1,5 +1,5 @@
 use druid::{
-    widget::{prelude::*, Label, LabelText},
+    widget::{prelude::*, Click, ControllerHost, Label, LabelText},
     Affine, Data, Widget,
 };
 
@@ -21,6 +21,13 @@ where
             inner: label,
             inner_size: Size::ZERO,
         }
+    }
+
+    pub fn on_click(
+        self,
+        f: impl Fn(&mut EventCtx<'_, '_>, &mut T, &Env) + 'static,
+    ) -> ControllerHost<Self, Click<T>> {
+        ControllerHost::new(self, Click::new(f))
     }
 }
 

@@ -4,6 +4,7 @@ mod compressor;
 
 pub use compressor::Compressor;
 use fizzerb_model::Response;
+use tracing::{debug, trace};
 
 #[derive(Debug, Clone)]
 pub struct ImpulseRenderer {
@@ -40,15 +41,10 @@ impl ImpulseRenderer {
         }
 
         let last_time = responses.last().unwrap().time;
-        log::debug!(
-            "last_time = {last_time}, sample_rate = {}, sample_period = {}",
-            self.sample_rate,
-            self.sample_period
-        );
         assert!(last_time > 0.0);
         let required_buffer_size = (last_time / self.sample_period).ceil() as usize + 2;
         if self.audio_buffer.len() < required_buffer_size {
-            log::debug!("resizing sample buffer to {required_buffer_size}");
+            trace!("resizing sample buffer to {required_buffer_size}");
             self.audio_buffer.resize(required_buffer_size, 0.0);
         }
 
@@ -67,7 +63,7 @@ impl ImpulseRenderer {
             .flatten()
             .unwrap_or(0);
         output.resize(truncated_length, 0.0);
-        log::debug!("rendering sample with length {truncated_length}");
+        debug!("rendering sample with length {truncated_length}");
 
         let mut input = output.clone();
         for sample in &mut input {

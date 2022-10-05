@@ -15,19 +15,19 @@ fizzerb-model = { path = "fizzerb-model" }
 fizzerb-tracer = { path = "fizzerb-tracer" }
 fizzerb-impulse = { path = "fizzerb-impulse" }
 glam = "0.21.3"
-log = "0.4.17"
 thiserror = "1.0.36"
 fastrand = "1.8.0"
+tracing = "0.1.36"
 
 [dependencies]
 bytemuck = "1.12.1"
-env_logger = "0.9.1"
 fastrand = { workspace = true }
 fizzerb-model = { workspace = true }
 fizzerb-tracer = { workspace = true }
 fizzerb-impulse = { workspace = true }
 glam = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = "0.3.15"
 thiserror = { workspace = true }
 hound = "3.5.0"
 rayon = "1.5.3"

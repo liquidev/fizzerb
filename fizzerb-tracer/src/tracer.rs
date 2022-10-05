@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use fizzerb_model::{MicrophoneIndex, Response, Space, Speaker, SpeakerIndex, WallIndex};
 use glam::Vec2;
+use tracing::trace;
 
 use crate::{
     ray::{LineSegment, Ray, RayHit},
@@ -38,7 +39,7 @@ impl<'r> Tracer<'r> {
     ///
     /// `start_ray` is assumed to be normalized.
     pub fn perform_trace(
-        &mut self,
+        &self,
         microphone_index: MicrophoneIndex,
         speaker_index: SpeakerIndex,
         start_ray: Vec2,
@@ -48,7 +49,7 @@ impl<'r> Tracer<'r> {
         let microphone = &self.space.microphones[microphone_index.0];
         let speaker = &self.space.speakers[speaker_index.0];
 
-        log::debug!("tracing from {microphone_index:?} to {speaker_index:?}");
+        trace!("tracing from {microphone_index:?} to {speaker_index:?}");
 
         let inv_speed_of_sound = 1.0 / self.config.speed_of_sound;
 
@@ -103,13 +104,13 @@ impl<'r> Tracer<'r> {
                     });
                 }
             } else {
-                log::trace!("empty space hit, finishing off");
+                trace!("empty space hit, finishing off");
                 break;
             }
         }
 
         let end = Instant::now();
-        log::debug!("tracing took {:?}", end - start);
+        trace!("tracing took {:?}", end - start);
 
         Recording {
             responses,

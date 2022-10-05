@@ -1,6 +1,8 @@
 pub mod data;
 pub mod style;
 
+use std::sync::Arc;
+
 use druid::{
     kurbo::{Circle, Line},
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
@@ -17,19 +19,23 @@ pub struct Transform {
 
 #[derive(Clone, Data)]
 pub struct SpaceEditorData {
-    pub space: EditableSpace,
+    pub space: Arc<EditableSpace>,
     pub transform: Transform,
 }
 
 impl SpaceEditorData {
     pub fn new(space: EditableSpace) -> Self {
         Self {
-            space,
+            space: Arc::new(space),
             transform: Transform {
                 pan: druid::Vec2::new(0.0, 0.0),
                 zoom: 25.0,
             },
         }
+    }
+
+    pub fn edit_space(&mut self) -> &mut EditableSpace {
+        Arc::make_mut(&mut self.space)
     }
 }
 

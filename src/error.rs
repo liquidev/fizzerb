@@ -10,4 +10,7 @@ pub enum Error {
 
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("WAV error: {0}")]
+    Wav(#[from] hound::Error),
 }

@@ -7,4 +7,4 @@ edition = "2021"
 fizzerb-model = { workspace = true }
 glam = { workspace = true }
 fastrand = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
