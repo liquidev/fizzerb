@@ -1,13 +1,16 @@
 #![windows_subsystem = "windows"]
 
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc, thread};
 
+use clap::Parser;
 use druid::{
     widget::{Flex, Padding, ZStack},
     AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
 use rendering::RenderSettings;
-use widgets::{Button, SpaceEditor, SpaceEditorData};
+use tracing::metadata::LevelFilter;
+use tracing_subscriber::{prelude::*, EnvFilter};
+use widgets::{data::EditableSpace, Button, SpaceEditor, SpaceEditorData};
 
 use crate::error::Error;
 
@@ -19,14 +22,14 @@ mod rendering;
 mod widgets;
 
 #[derive(Clone, Data, Lens)]
-pub struct RootData {
+struct RootData {
     space_editor: SpaceEditorData,
 }
 
 fn root() -> impl Widget<RootData> {
     let render_button = Button::new("Render").on_click(|_ctx, data: &mut RootData, _env| {
         let editable_space = Arc::clone(&data.space_editor.space);
-        rendering::render(editable_space, &RenderSettings::default());
+        thread::spawn(move || rendering::render(editable_space, &RenderSettings::default()));
     });
 
     let space_editor = SpaceEditor::new().lens(RootData::space_editor);
@@ -38,16 +41,31 @@ fn root() -> impl Widget<RootData> {
     )
 }
 
+#[derive(Parser)]
+struct Args {
+    space_file: Option<PathBuf>,
+}
+
 fn main() -> Result<(), Error> {
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .without_time()
-        .finish();
+    let subscriber = tracing_subscriber::registry()
+        .with(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::DEBUG.into())
+                .from_env_lossy(),
+        )
+        .with(tracing_subscriber::fmt::layer().without_time());
     tracing::subscriber::set_global_default(subscriber)
         .expect("cannot set default tracing subscriber");
 
-    let space = std::fs::read_to_string("spaces/four_walls.json")?;
-    let space = serde_json::from_str(&space)?;
+    let args = Args::parse();
+    let space = {
+        if let Some(path) = &args.space_file {
+            let json = std::fs::read_to_string(path)?;
+            serde_json::from_str(&json)?
+        } else {
+            EditableSpace::new()
+        }
+    };
 
     let window = WindowDesc::new(root())
         .window_size((600.0, 600.0))
