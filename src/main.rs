@@ -7,10 +7,11 @@ use druid::{
     widget::{Flex, Padding, ZStack},
     AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc,
 };
+use project::Project;
 use rendering::RenderSettings;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::{prelude::*, EnvFilter};
-use widgets::{data::EditableSpace, Button, SpaceEditor, SpaceEditorData};
+use widgets::{Button, SpaceEditor};
 
 use crate::error::Error;
 
@@ -18,21 +19,24 @@ mod error;
 #[macro_use]
 mod style;
 mod math;
+mod project;
 mod rendering;
 mod widgets;
 
 #[derive(Clone, Data, Lens)]
 struct RootData {
-    space_editor: SpaceEditorData,
+    project: Project,
 }
 
 fn root() -> impl Widget<RootData> {
     let render_button = Button::new("Render").on_click(|_ctx, data: &mut RootData, _env| {
-        let editable_space = Arc::clone(&data.space_editor.space);
+        let editable_space = Arc::clone(&data.project.space_editor.space);
         thread::spawn(move || rendering::render(editable_space, &RenderSettings::default()));
     });
 
-    let space_editor = SpaceEditor::new().lens(RootData::space_editor);
+    let space_editor = SpaceEditor::new()
+        .lens(Project::space_editor)
+        .lens(RootData::project);
     let bottom_right = Flex::row().with_child(render_button);
 
     ZStack::new(space_editor).with_aligned_child(
@@ -58,12 +62,12 @@ fn main() -> Result<(), Error> {
         .expect("cannot set default tracing subscriber");
 
     let args = Args::parse();
-    let space = {
+    let project = {
         if let Some(path) = &args.space_file {
             let json = std::fs::read_to_string(path)?;
             serde_json::from_str(&json)?
         } else {
-            EditableSpace::new()
+            Project::new()
         }
     };
 
@@ -76,9 +80,7 @@ fn main() -> Result<(), Error> {
         .configure_env(|env, _| {
             style::configure_env(env).expect("cannot configure styles");
         })
-        .launch(RootData {
-            space_editor: SpaceEditorData::new(space),
-        })?;
+        .launch(RootData { project })?;
 
     Ok(())
 }

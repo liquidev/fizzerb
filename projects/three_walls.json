@@ -1,0 +1,81 @@
+{
+    "space_editor": {
+        "space": {
+            "objects": [
+                {
+                    "Wall": {
+                        "start": {
+                            "x": -5,
+                            "y": -5
+                        },
+                        "end": {
+                            "x": -5,
+                            "y": 5
+                        },
+                        "material": 0
+                    }
+                },
+                {
+                    "Wall": {
+                        "start": {
+                            "x": -5,
+                            "y": 5
+                        },
+                        "end": {
+                            "x": 5,
+                            "y": 5
+                        },
+                        "material": 0
+                    }
+                },
+                {
+                    "Wall": {
+                        "start": {
+                            "x": 5,
+                            "y": 5
+                        },
+                        "end": {
+                            "x": 5,
+                            "y": -5
+                        },
+                        "material": 0
+                    }
+                },
+                {
+                    "Microphone": {
+                        "position": {
+                            "x": -4,
+                            "y": 0
+                        }
+                    }
+                },
+                {
+                    "Speaker": {
+                        "position": {
+                            "x": 4,
+                            "y": 0
+                        },
+                        "power": 10
+                    }
+                }
+            ]
+        },
+        "transform": {
+            "pan": {
+                "x": 0,
+                "y": 0
+            },
+            "zoom": 24
+        }
+    },
+    "render_settings": {
+        "max_bounces": 512,
+        "samples": 256,
+        "speed_of_sound": 343,
+        "compressor_gain": 1.0,
+        "compressor_threshold": 0.8,
+        "compressor_release": 2.0,
+        "sample_rate": 48000,
+        "output_path": "four_walls_#.wav"
+    }
+}

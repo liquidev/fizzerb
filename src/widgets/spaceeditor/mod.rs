@@ -8,16 +8,17 @@ use druid::{
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, RenderContext, Size, UpdateCtx, Widget,
 };
+use serde::{Deserialize, Serialize};
 
 use self::data::{EditableSpace, Object};
 
-#[derive(Clone, Data)]
+#[derive(Clone, Data, Deserialize, Serialize)]
 pub struct Transform {
     pub pan: druid::Vec2,
     pub zoom: f64,
 }
 
-#[derive(Clone, Data)]
+#[derive(Clone, Data, Deserialize, Serialize)]
 pub struct SpaceEditorData {
     pub space: Arc<EditableSpace>,
     pub transform: Transform,

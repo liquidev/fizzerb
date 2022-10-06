@@ -8,11 +8,12 @@ use fizzerb_model::{MicrophoneIndex, SpeakerIndex};
 use fizzerb_tracer::{Tracer, TracerConfig, SPEED_OF_SOUND_IN_AIR};
 use hound::{SampleFormat, WavSpec, WavWriter};
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, debug_span, error, info, info_span};
 
 use crate::{error::Error, widgets::data::EditableSpace};
 
-#[derive(Debug, Clone, Data, Lens)]
+#[derive(Debug, Clone, Data, Lens, Deserialize, Serialize)]
 pub struct RenderSettings {
     pub max_bounces: usize,
     pub samples: usize,
