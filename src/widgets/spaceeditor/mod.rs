@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use druid::{
     kurbo::{Circle, Line},
+    piet::{LineCap, StrokeStyle},
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, RenderContext, Size, UpdateCtx, Widget,
 };
@@ -98,10 +99,11 @@ impl Widget<SpaceEditorData> for SpaceEditor {
         for object in &data.space.objects {
             match object {
                 Object::Wall(wall) => {
-                    ctx.stroke(
+                    ctx.stroke_styled(
                         Line::new(wall.start.to_point(), wall.end.to_point()),
                         &env.get(style::WALL_COLOR),
                         env.get(style::WALL_THICKNESS),
+                        &StrokeStyle::default().line_cap(LineCap::Round),
                     );
                 }
                 Object::Microphone(microphone) => {
