@@ -1,5 +1,6 @@
 use druid::{Color, Env, Key};
 
+use super::tool;
 use crate::style::color;
 
 pub const BACKGROUND: Key<Color> = style_key!("space-editor.background");
@@ -26,4 +27,6 @@ pub fn configure_env(env: &mut Env) {
 
     env.set(SPEAKER_COLOR, color(0xEC5740));
     env.set(SPEAKER_RADIUS, 0.5);
+
+    tool::style::configure_env(env);
 }

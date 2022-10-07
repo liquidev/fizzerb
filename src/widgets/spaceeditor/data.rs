@@ -3,26 +3,26 @@ use fizzerb_model as model;
 use model::Space;
 use serde::{Deserialize, Serialize};
 
-use crate::math::DruidVec2Ext;
+use crate::math::DruidExtToGlam;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Data, Deserialize, Serialize)]
 pub struct MaterialIndex(usize);
 
 #[derive(Debug, Clone, PartialEq, Data, Deserialize, Serialize)]
 pub struct Wall {
-    pub start: druid::Vec2,
-    pub end: druid::Vec2,
+    pub start: druid::Point,
+    pub end: druid::Point,
     pub material: MaterialIndex,
 }
 
 #[derive(Debug, Clone, PartialEq, Data, Deserialize, Serialize)]
 pub struct Microphone {
-    pub position: druid::Vec2,
+    pub position: druid::Point,
 }
 
 #[derive(Debug, Clone, PartialEq, Data, Deserialize, Serialize)]
 pub struct Speaker {
-    pub position: druid::Vec2,
+    pub position: druid::Point,
     pub power: f32,
 }
 

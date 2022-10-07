@@ -1,5 +1,7 @@
 pub mod data;
 pub mod style;
+pub mod tool;
+pub mod transform;
 
 use std::sync::Arc;
 
@@ -11,28 +13,28 @@ use druid::{
 };
 use serde::{Deserialize, Serialize};
 
-use self::data::{EditableSpace, Object};
+use self::{
+    data::{EditableSpace, Object},
+    tool::{Tool, ToolImpl},
+    transform::Transform,
+};
 
 #[derive(Clone, Data, Deserialize, Serialize)]
-pub struct Transform {
-    pub pan: druid::Vec2,
-    pub zoom: f64,
-}
-
-#[derive(Clone, Data, Deserialize, Serialize)]
-pub struct SpaceEditorData {
+pub struct SpaceEditorProjectData {
     pub space: Arc<EditableSpace>,
     pub transform: Transform,
+    pub tool: Tool,
 }
 
-impl SpaceEditorData {
+impl SpaceEditorProjectData {
     pub fn new(space: EditableSpace) -> Self {
         Self {
             space: Arc::new(space),
             transform: Transform {
                 pan: druid::Vec2::new(0.0, 0.0),
-                zoom: 25.0,
+                zoom_level: 1.0,
             },
+            tool: Tool::Cursor,
         }
     }
 
@@ -41,87 +43,103 @@ impl SpaceEditorData {
     }
 }
 
-pub struct SpaceEditor {}
+pub struct SpaceEditor {
+    tool: Box<dyn ToolImpl>,
+}
 
 impl SpaceEditor {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            tool: Tool::default().get_impl(),
+        }
+    }
+
+    fn update_tool(&mut self, tool: Tool) {
+        self.tool = tool.get_impl();
     }
 }
 
-impl Widget<SpaceEditorData> for SpaceEditor {
+impl Widget<SpaceEditorProjectData> for SpaceEditor {
     fn event(
         &mut self,
-        _ctx: &mut EventCtx,
-        _event: &Event,
-        _data: &mut SpaceEditorData,
-        _env: &Env,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut SpaceEditorProjectData,
+        env: &Env,
     ) {
+        self.tool.event(ctx, event, data, env);
     }
 
     fn lifecycle(
         &mut self,
         _ctx: &mut LifeCycleCtx,
-        _event: &LifeCycle,
-        _data: &SpaceEditorData,
+        event: &LifeCycle,
+        data: &SpaceEditorProjectData,
         _env: &Env,
     ) {
+        if let LifeCycle::WidgetAdded = event {
+            self.update_tool(data.tool);
+        }
     }
 
     fn update(
         &mut self,
         _ctx: &mut UpdateCtx,
-        _old_data: &SpaceEditorData,
-        _data: &SpaceEditorData,
+        old_data: &SpaceEditorProjectData,
+        data: &SpaceEditorProjectData,
         _env: &Env,
     ) {
+        if data.tool != old_data.tool {
+            self.update_tool(data.tool);
+        }
     }
 
     fn layout(
         &mut self,
         _ctx: &mut LayoutCtx,
         bc: &BoxConstraints,
-        _data: &SpaceEditorData,
+        _data: &SpaceEditorProjectData,
         _env: &Env,
     ) -> Size {
         bc.max()
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &SpaceEditorData, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &SpaceEditorProjectData, env: &Env) {
         let bounds = ctx.size().to_rect();
 
         ctx.fill(bounds, &env.get(style::BACKGROUND));
 
-        ctx.save().unwrap();
-        ctx.transform(Affine::translate(bounds.center().to_vec2()));
-        ctx.transform(Affine::scale(data.transform.zoom));
+        ctx.with_save(|ctx| {
+            ctx.transform(Affine::translate(bounds.center().to_vec2()));
+            ctx.transform(Affine::scale(data.transform.zoom()));
 
-        for object in &data.space.objects {
-            match object {
-                Object::Wall(wall) => {
-                    ctx.stroke_styled(
-                        Line::new(wall.start.to_point(), wall.end.to_point()),
-                        &env.get(style::WALL_COLOR),
-                        env.get(style::WALL_THICKNESS),
-                        &StrokeStyle::default().line_cap(LineCap::Round),
-                    );
+            for object in &data.space.objects {
+                match object {
+                    Object::Wall(wall) => {
+                        ctx.stroke_styled(
+                            Line::new(wall.start, wall.end),
+                            &env.get(style::WALL_COLOR),
+                            env.get(style::WALL_THICKNESS),
+                            &StrokeStyle::default().line_cap(LineCap::Round),
+                        );
+                    }
+                    Object::Microphone(microphone) => {
+                        let thickness = env.get(style::MICROPHONE_THICKNESS);
+                        let radius = env.get(style::MICROPHONE_RADIUS) - thickness * 0.5;
+                        ctx.stroke(
+                            Circle::new(microphone.position, radius),
+                            &env.get(style::MICROPHONE_COLOR),
+                            thickness,
+                        );
+                    }
+                    Object::Speaker(speaker) => ctx.fill(
+                        Circle::new(speaker.position, env.get(style::SPEAKER_RADIUS)),
+                        &env.get(style::SPEAKER_COLOR),
+                    ),
                 }
-                Object::Microphone(microphone) => {
-                    let thickness = env.get(style::MICROPHONE_THICKNESS);
-                    let radius = env.get(style::MICROPHONE_RADIUS) - thickness * 0.5;
-                    ctx.stroke(
-                        Circle::new(microphone.position.to_point(), radius),
-                        &env.get(style::MICROPHONE_COLOR),
-                        thickness,
-                    );
-                }
-                Object::Speaker(speaker) => ctx.fill(
-                    Circle::new(speaker.position.to_point(), env.get(style::SPEAKER_RADIUS)),
-                    &env.get(style::SPEAKER_COLOR),
-                ),
             }
-        }
+        });
 
-        ctx.restore().unwrap();
+        self.tool.paint(ctx, data, env);
     }
 }
