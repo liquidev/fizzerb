@@ -41,7 +41,6 @@ impl CursorTool {
                             || position.in_circle(wall.start, object_params.wall_thickness)
                             || position.in_circle(wall.end, object_params.wall_thickness);
                     if is_hot {
-                        println!("asdasdd");
                         self.hot_object = Some(index);
                         break;
                     }
@@ -50,7 +49,6 @@ impl CursorTool {
                     let is_hot =
                         position.in_circle(microphone.position, object_params.microphone_radius);
                     if is_hot {
-                        println!("asdasdd");
                         self.hot_object = Some(index);
                         break;
                     }
@@ -58,7 +56,6 @@ impl CursorTool {
                 Object::Speaker(speaker) => {
                     let is_hot = position.in_circle(speaker.position, object_params.speaker_radius);
                     if is_hot {
-                        println!("asdasdd");
                         self.hot_object = Some(index);
                         break;
                     }
@@ -88,6 +85,7 @@ impl ToolImpl for CursorTool {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SpaceEditorProjectData, env: &Env) {
         let primary_color = env.get(style::PRIMARY_SELECTION_COLOR);
+        let viewport_size = ctx.size();
 
         if let Some(hot_index) = self.hot_object {
             let object = &data.space.objects[hot_index];
@@ -95,24 +93,34 @@ impl ToolImpl for CursorTool {
             let stroke_style = StrokeStyle::default().line_cap(LineCap::Round);
             match object {
                 Object::Wall(wall) => {
+                    let start = data.transform.to_screen_space(wall.start, viewport_size);
+                    let end = data.transform.to_screen_space(wall.end, viewport_size);
                     ctx.stroke_styled(
-                        Line::new(wall.start, wall.end),
+                        Line::new(start, end),
                         &primary_color,
                         thickness,
                         &stroke_style,
                     );
                 }
                 Object::Microphone(microphone) => {
+                    let position = data
+                        .transform
+                        .to_screen_space(microphone.position, viewport_size);
+                    let radius = env.get(style::MICROPHONE_RADIUS) * data.transform.zoom();
                     ctx.stroke_styled(
-                        Circle::new(microphone.position, env.get(style::MICROPHONE_RADIUS)),
+                        Circle::new(position, radius),
                         &primary_color,
                         thickness,
                         &stroke_style,
                     );
                 }
                 Object::Speaker(speaker) => {
+                    let position = data
+                        .transform
+                        .to_screen_space(speaker.position, viewport_size);
+                    let radius = env.get(style::SPEAKER_RADIUS) * data.transform.zoom();
                     ctx.stroke_styled(
-                        Circle::new(speaker.position, env.get(style::SPEAKER_RADIUS)),
+                        Circle::new(position, radius),
                         &primary_color,
                         thickness,
                         &stroke_style,
@@ -160,15 +168,15 @@ pub mod style {
         env.set(PRIMARY_SELECTION_COLOR, color(0x168BE3));
         env.set(SECONDARY_SELECTION_COLOR, color(0xFFFFFF));
 
-        env.set(HOT_OUTLINE_THICKNESS, 2.0);
-        env.set(FOCUSED_OUTLINE_THICKNESS, 4.0);
+        env.set(HOT_OUTLINE_THICKNESS, 3.0);
+        env.set(FOCUSED_OUTLINE_THICKNESS, 6.0);
         env.set(
             MICROPHONE_RADIUS,
-            env.get(spaceeditor::style::MICROPHONE_RADIUS) * 1.2,
+            env.get(spaceeditor::style::MICROPHONE_RADIUS) * 1.4,
         );
         env.set(
             SPEAKER_RADIUS,
-            env.get(spaceeditor::style::SPEAKER_RADIUS) * 1.2,
+            env.get(spaceeditor::style::SPEAKER_RADIUS) * 1.4,
         );
     }
 }

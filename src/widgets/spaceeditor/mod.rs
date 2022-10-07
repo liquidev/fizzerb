@@ -67,7 +67,9 @@ impl Widget<SpaceEditorProjectData> for SpaceEditor {
         data: &mut SpaceEditorProjectData,
         env: &Env,
     ) {
-        self.tool.event(ctx, event, data, env);
+        let viewport_size = ctx.size();
+        let viewport_space_event = data.transform.mouse_to_viewport_space(event, viewport_size);
+        self.tool.event(ctx, &viewport_space_event, data, env);
     }
 
     fn lifecycle(
