@@ -1,7 +1,7 @@
 use druid::{
     kurbo::{Circle, Line},
     piet::{LineCap, StrokeStyle},
-    Env, Event, EventCtx, PaintCtx, Point, RenderContext, Vec2,
+    Color, Env, Event, EventCtx, PaintCtx, Point, RenderContext, Vec2,
 };
 use spaceeditor::{
     data::{Microphone, Speaker, Wall},
@@ -23,9 +23,32 @@ enum State {
     DraggingEntireFocusedObject,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HotPart {
+    EntireObject,
+    WallStart,
+    WallEnd,
+}
+
+impl HotPart {
+    fn should_move_wall_start(&self) -> bool {
+        matches!(self, HotPart::EntireObject | HotPart::WallStart)
+    }
+
+    fn should_move_wall_end(&self) -> bool {
+        matches!(self, HotPart::EntireObject | HotPart::WallEnd)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HotState {
+    object: usize,
+    part: HotPart,
+}
+
 pub struct CursorTool {
-    hot_object: Option<usize>,
-    focused_object: Option<usize>,
+    hot_state: Option<HotState>,
+    focused_state: Option<HotState>,
     state: State,
     last_mouse_pos: Point,
 }
@@ -33,8 +56,8 @@ pub struct CursorTool {
 impl CursorTool {
     pub fn new() -> Self {
         Self {
-            hot_object: None,
-            focused_object: None,
+            hot_state: None,
+            focused_state: None,
             state: State::Idle,
             last_mouse_pos: Point::ZERO,
         }
@@ -46,47 +69,101 @@ impl CursorTool {
         space: &EditableSpace,
         position: Point,
     ) {
-        self.hot_object = None;
+        self.hot_state = None;
+
+        // Prioritize the focused object, then try other objects.
+        if let Some(HotState { object: index, .. }) = self.focused_state {
+            let object = &space.objects[index];
+            if self.check_object_hotness(object, index, position, object_params) {
+                return;
+            }
+        }
+
         for (index, object) in space.objects.iter().enumerate() {
-            match object {
-                Object::Wall(wall) => {
-                    let is_hot =
-                        position.near_line(wall.start, wall.end, object_params.wall_thickness)
-                            || position.in_circle(wall.start, object_params.wall_thickness)
-                            || position.in_circle(wall.end, object_params.wall_thickness);
-                    if is_hot {
-                        self.hot_object = Some(index);
-                        break;
-                    }
-                }
-                Object::Microphone(microphone) => {
-                    let is_hot =
-                        position.in_circle(microphone.position, object_params.microphone_radius);
-                    if is_hot {
-                        self.hot_object = Some(index);
-                        break;
-                    }
-                }
-                Object::Speaker(speaker) => {
-                    let is_hot = position.in_circle(speaker.position, object_params.speaker_radius);
-                    if is_hot {
-                        self.hot_object = Some(index);
-                        break;
-                    }
-                }
+            let did_set_hot_state =
+                self.check_object_hotness(object, index, position, object_params);
+
+            // The hotness of focused objects takes priority over non-focused objects.
+            if did_set_hot_state && self.focused_state == self.hot_state {
+                break;
             }
         }
     }
 
-    fn drag_entire_object(&mut self, object: &mut Object, delta: Vec2) {
+    fn check_object_hotness(
+        &mut self,
+        object: &Object,
+        object_index: usize,
+        position: Point,
+        object_params: &CachedObjectParams,
+    ) -> bool {
+        match object {
+            Object::Wall(wall) => {
+                let hot_part = if position.in_circle(wall.start, object_params.handle_radius) {
+                    Some(HotPart::WallStart)
+                } else if position.in_circle(wall.end, object_params.handle_radius) {
+                    Some(HotPart::WallEnd)
+                } else if position.near_line(wall.start, wall.end, object_params.wall_thickness) {
+                    Some(HotPart::EntireObject)
+                } else {
+                    None
+                };
+                if let Some(part) = hot_part {
+                    self.hot_state = Some(HotState {
+                        object: object_index,
+                        part,
+                    });
+                    return true;
+                }
+            }
+            Object::Microphone(microphone) => {
+                let is_hot =
+                    position.in_circle(microphone.position, object_params.microphone_radius);
+                if is_hot {
+                    self.hot_state = Some(HotState {
+                        object: object_index,
+                        part: HotPart::EntireObject,
+                    });
+                    return true;
+                }
+            }
+            Object::Speaker(speaker) => {
+                let is_hot = position.in_circle(speaker.position, object_params.speaker_radius);
+                if is_hot {
+                    self.hot_state = Some(HotState {
+                        object: object_index,
+                        part: HotPart::EntireObject,
+                    });
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn drag_entire_object(&mut self, object: &mut Object, part: HotPart, delta: Vec2) {
         match object {
             Object::Wall(Wall { start, end, .. }) => {
-                *start += delta;
-                *end += delta;
+                if part.should_move_wall_start() {
+                    *start += delta;
+                }
+                if part.should_move_wall_end() {
+                    *end += delta;
+                }
             }
             Object::Microphone(Microphone { position })
             | Object::Speaker(Speaker { position, .. }) => *position += delta,
         }
+    }
+
+    fn focused_object_is_hot(&self) -> bool {
+        self.focused_state.map(|s| s.object) == self.hot_state.map(|s| s.object)
+    }
+
+    fn object_part_is_hot(&self, object_index: usize, part: HotPart) -> bool {
+        self.hot_state
+            .map(|s| s.object == object_index && s.part == part)
+            .unwrap_or(false)
     }
 }
 
@@ -100,32 +177,35 @@ impl ToolImpl for CursorTool {
     ) {
         match (self.state, event) {
             (State::Idle, Event::MouseMove(mouse)) => {
-                let object_params = CachedObjectParams::from_env(env);
-                let previous_hot = self.hot_object;
+                let object_params =
+                    CachedObjectParams::from_env_and_transform(env, &data.transform);
+                let previous_hot = self.hot_state;
                 self.make_object_hot_at_position(&object_params, &data.space, mouse.pos);
-                if self.hot_object != previous_hot {
+                if self.hot_state != previous_hot {
                     ctx.request_paint();
                 }
             }
             (State::Idle, Event::MouseDown(_)) => {
-                self.focused_object = self.hot_object;
-                if self.hot_object.is_some() {
+                self.focused_state = self.hot_state;
+                if self.hot_state.is_some() {
                     self.state = State::DraggingEntireFocusedObject;
+                    ctx.set_active(true);
                     ctx.request_paint();
                 }
             }
 
             (State::DraggingEntireFocusedObject, Event::MouseMove(mouse)) => {
-                if let Some(focused_object) = self.focused_object {
-                    let object = &mut data.edit_space().objects[focused_object];
+                if let Some(HotState { object, part }) = self.focused_state {
+                    let object = &mut data.edit_space().objects[object];
                     let delta = mouse.pos - self.last_mouse_pos;
-                    self.drag_entire_object(object, delta);
+                    self.drag_entire_object(object, part, delta);
                     ctx.request_paint();
                 }
             }
 
             (_, Event::MouseUp(_)) => {
                 self.state = State::Idle;
+                ctx.set_active(false);
                 ctx.request_paint();
             }
 
@@ -139,33 +219,76 @@ impl ToolImpl for CursorTool {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &SpaceEditorProjectData, env: &Env) {
         let viewport_size = ctx.size();
+        let primary_color = env.get(style::PRIMARY_SELECTION_COLOR);
+        let secondary_color = env.get(style::SECONDARY_SELECTION_COLOR);
 
-        if let Some(focused_index) = self.focused_object {
-            let object = &data.space.objects[focused_index];
-            paint_object_outline(
-                ctx,
-                env,
-                &data.transform,
-                viewport_size,
-                object,
-                env.get(style::FOCUSED_OUTLINE_THICKNESS),
-            );
-        }
+        if let Some(HotState {
+            object: object_index,
+            ..
+        }) = self.focused_state
+        {
+            let object = &data.space.objects[object_index];
 
-        if let Some(hot_index) = self.hot_object {
-            if self.hot_object != self.focused_object {
-                let object = &data.space.objects[hot_index];
-                paint_object_outline(
+            let thickness = if self.object_part_is_hot(object_index, HotPart::EntireObject) {
+                env.get(style::HOT_FOCUSED_OUTLINE_THICKNESS)
+            } else {
+                env.get(style::FOCUSED_OUTLINE_THICKNESS)
+            };
+            paint_object_outline(ctx, env, &data.transform, viewport_size, object, thickness);
+
+            if let &Object::Wall(Wall { start, end, .. }) = object {
+                let start = data.transform.to_screen_space(start, viewport_size);
+                let end = data.transform.to_screen_space(end, viewport_size);
+                paint_object_handle(
                     ctx,
                     env,
-                    &data.transform,
-                    viewport_size,
-                    object,
-                    env.get(style::HOT_OUTLINE_THICKNESS),
+                    start,
+                    &primary_color,
+                    &secondary_color,
+                    self.object_part_is_hot(object_index, HotPart::WallStart),
+                );
+                paint_object_handle(
+                    ctx,
+                    env,
+                    end,
+                    &primary_color,
+                    &secondary_color,
+                    self.object_part_is_hot(object_index, HotPart::WallEnd),
                 );
             }
         }
+
+        if let Some(HotState { object, .. }) = self.hot_state {
+            if !self.focused_object_is_hot() {
+                let object = &data.space.objects[object];
+                let thickness = env.get(style::HOT_OUTLINE_THICKNESS);
+                paint_object_outline(ctx, env, &data.transform, viewport_size, object, thickness);
+            }
+        }
     }
+}
+
+fn paint_object_handle(
+    ctx: &mut PaintCtx,
+    env: &Env,
+    position: Point,
+    primary_color: &Color,
+    secondary_color: &Color,
+    is_hot: bool,
+) {
+    let (inner_radius, outer_radius) = if is_hot {
+        (
+            env.get(style::HOT_HANDLE_INNER_RADIUS),
+            env.get(style::HOT_HANDLE_OUTER_RADIUS),
+        )
+    } else {
+        (
+            env.get(style::IDLE_HANDLE_INNER_RADIUS),
+            env.get(style::IDLE_HANDLE_OUTER_RADIUS),
+        )
+    };
+    ctx.fill(Circle::new(position, outer_radius), secondary_color);
+    ctx.fill(Circle::new(position, inner_radius), primary_color);
 }
 
 fn paint_object_outline(
@@ -216,14 +339,16 @@ struct CachedObjectParams {
     microphone_radius: f64,
     speaker_radius: f64,
     wall_thickness: f64,
+    handle_radius: f64,
 }
 
 impl CachedObjectParams {
-    fn from_env(env: &Env) -> Self {
+    fn from_env_and_transform(env: &Env, transform: &Transform) -> Self {
         Self {
             microphone_radius: env.get(spaceeditor::style::MICROPHONE_RADIUS),
             speaker_radius: env.get(spaceeditor::style::SPEAKER_RADIUS),
-            wall_thickness: env.get(spaceeditor::style::WALL_THICKNESS),
+            wall_thickness: env.get(spaceeditor::style::WALL_THICKNESS) * 0.5,
+            handle_radius: env.get(style::HOT_HANDLE_OUTER_RADIUS) / transform.zoom() * 2.0,
         }
     }
 }
@@ -241,16 +366,26 @@ pub mod style {
     pub const HOT_OUTLINE_THICKNESS: Key<f64> = style_key!("tool.cursor.selection.hot-thickness");
     pub const FOCUSED_OUTLINE_THICKNESS: Key<f64> =
         style_key!("tool.cursor.selection.focused-thickness");
+    pub const HOT_FOCUSED_OUTLINE_THICKNESS: Key<f64> =
+        style_key!("tool.cursor.selection.hot-focused-thickness");
 
     pub const MICROPHONE_RADIUS: Key<f64> = style_key!("tool.cursor.microphone.radius");
     pub const SPEAKER_RADIUS: Key<f64> = style_key!("tool.cursor.speaker.radius");
+
+    pub const IDLE_HANDLE_INNER_RADIUS: Key<f64> =
+        style_key!("tool.cursor.handle.idle.inner-radius");
+    pub const IDLE_HANDLE_OUTER_RADIUS: Key<f64> =
+        style_key!("tool.cursor.handle.idle.outer-radius");
+    pub const HOT_HANDLE_INNER_RADIUS: Key<f64> = style_key!("tool.cursor.handle.hot.inner-radius");
+    pub const HOT_HANDLE_OUTER_RADIUS: Key<f64> = style_key!("tool.cursor.handle.hot.outer-radius");
 
     pub fn configure_env(env: &mut Env) {
         env.set(PRIMARY_SELECTION_COLOR, color(0x168BE3));
         env.set(SECONDARY_SELECTION_COLOR, color(0xFFFFFF));
 
-        env.set(HOT_OUTLINE_THICKNESS, 3.0);
-        env.set(FOCUSED_OUTLINE_THICKNESS, 6.0);
+        env.set(HOT_OUTLINE_THICKNESS, 2.0);
+        env.set(FOCUSED_OUTLINE_THICKNESS, 4.0);
+        env.set(HOT_FOCUSED_OUTLINE_THICKNESS, 6.0);
         env.set(
             MICROPHONE_RADIUS,
             env.get(spaceeditor::style::MICROPHONE_RADIUS) * 1.4,
@@ -259,5 +394,10 @@ pub mod style {
             SPEAKER_RADIUS,
             env.get(spaceeditor::style::SPEAKER_RADIUS) * 1.4,
         );
+
+        env.set(IDLE_HANDLE_INNER_RADIUS, 4.0);
+        env.set(IDLE_HANDLE_OUTER_RADIUS, 6.0);
+        env.set(HOT_HANDLE_INNER_RADIUS, 6.0);
+        env.set(HOT_HANDLE_OUTER_RADIUS, 8.0);
     }
 }
