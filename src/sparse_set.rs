@@ -28,14 +28,14 @@ pub struct SparseSet<T> {
     next_free_id: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Sparse {
     dense: u32,
     /// When this is None, there is no element at this index.
     generation: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Dense {
     sparse: u32,
 }
@@ -335,6 +335,60 @@ mod serialization {
         }
     }
 }
+
+mod debug {
+    use std::fmt::Debug;
+
+    use super::*;
+
+    impl<T> Debug for SparseSet<T>
+    where
+        T: Debug,
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            struct Entry<'a, T> {
+                id: Id<T>,
+                element: &'a T,
+            }
+
+            impl<'a, T> Debug for Entry<'a, T>
+            where
+                T: Debug,
+            {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    Debug::fmt(&self.id, f)?;
+                    f.write_str(": ")?;
+                    Debug::fmt(self.element, f)?;
+                    Ok(())
+                }
+            }
+
+            f.write_str("SparseSet ")?;
+            f.debug_list()
+                .entries(self.pairs().map(|(id, element)| Entry { id, element }))
+                .finish()
+        }
+    }
+}
+
+impl<T> Default for SparseSet<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> PartialEq for SparseSet<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+            && self.sparse_to_dense == other.sparse_to_dense
+            && self.dense_to_sparse == other.dense_to_sparse
+    }
+}
+
+impl<T> Eq for SparseSet<T> where T: Eq {}
 
 pub struct Ids<'a, T> {
     set: &'a SparseSet<T>,
