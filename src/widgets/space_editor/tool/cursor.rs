@@ -11,6 +11,7 @@ use space_editor::{
 use super::ToolImpl;
 use crate::{
     math::PointExtHitTests,
+    sparse_set::Id,
     widgets::{
         data::{EditableSpace, Object},
         space_editor, SpaceEditorProjectData,
@@ -42,7 +43,7 @@ impl HotPart {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HotState {
-    object: usize,
+    object: Id<Object>,
     part: HotPart,
 }
 
@@ -79,9 +80,8 @@ impl CursorTool {
             }
         }
 
-        for (index, object) in space.objects.iter().enumerate() {
-            let did_set_hot_state =
-                self.check_object_hotness(object, index, position, object_params);
+        for (id, object) in space.objects.pairs() {
+            let did_set_hot_state = self.check_object_hotness(object, id, position, object_params);
 
             // The hotness of focused objects takes priority over non-focused objects.
             if did_set_hot_state && self.focused_state == self.hot_state {
@@ -93,7 +93,7 @@ impl CursorTool {
     fn check_object_hotness(
         &mut self,
         object: &Object,
-        object_index: usize,
+        object_index: Id<Object>,
         position: Point,
         object_params: &CachedObjectParams,
     ) -> bool {
@@ -160,9 +160,9 @@ impl CursorTool {
         self.focused_state.map(|s| s.object) == self.hot_state.map(|s| s.object)
     }
 
-    fn object_part_is_hot(&self, object_index: usize, part: HotPart) -> bool {
+    fn object_part_is_hot(&self, object_id: Id<Object>, part: HotPart) -> bool {
         self.hot_state
-            .map(|s| s.object == object_index && s.part == part)
+            .map(|s| s.object == object_id && s.part == part)
             .unwrap_or(false)
     }
 }

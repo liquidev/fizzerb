@@ -3,7 +3,7 @@ use fizzerb_model as model;
 use model::Space;
 use serde::{Deserialize, Serialize};
 
-use crate::math::DruidExtToGlam;
+use crate::{math::DruidExtToGlam, sparse_set::SparseSet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Data, Deserialize, Serialize)]
 pub struct MaterialIndex(usize);
@@ -36,12 +36,14 @@ pub enum Object {
 #[derive(Debug, Clone, Data, Deserialize, Serialize)]
 pub struct EditableSpace {
     #[data(same_fn = "PartialEq::eq")]
-    pub objects: Vec<Object>,
+    pub objects: SparseSet<Object>,
 }
 
 impl EditableSpace {
     pub fn new() -> Self {
-        Self { objects: vec![] }
+        Self {
+            objects: SparseSet::new(),
+        }
     }
 
     pub fn to_model(&self) -> Space {

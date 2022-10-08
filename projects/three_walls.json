@@ -3,6 +3,7 @@
         "space": {
             "objects": [
                 {
+                    "id": 0,
                     "Wall": {
                         "start": {
                             "x": -5,
@@ -16,6 +17,7 @@
                     }
                 },
                 {
+                    "id": 1,
                     "Wall": {
                         "start": {
                             "x": -5,
@@ -29,6 +31,7 @@
                     }
                 },
                 {
+                    "id": 2,
                     "Wall": {
                         "start": {
                             "x": 5,
@@ -42,6 +45,7 @@
                     }
                 },
                 {
+                    "id": 3,
                     "Microphone": {
                         "position": {
                             "x": -4,
@@ -50,6 +54,7 @@
                     }
                 },
                 {
+                    "id": 4,
                     "Speaker": {
                         "position": {
                             "x": 4,
