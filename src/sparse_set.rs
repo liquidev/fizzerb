@@ -61,34 +61,6 @@ impl<T> SparseSet<T> {
         Id::new(sparse_index, generation)
     }
 
-    /// Internal method used for deserialization.
-    fn insert_at_sparse_index(
-        &mut self,
-        index: u32,
-        element: T,
-    ) -> Result<(), serialization::OverlappingId> {
-        if let Some(Some(_)) = self.data.get(index as usize) {
-            return Err(serialization::OverlappingId(index));
-        }
-
-        let index = index as usize;
-        while self.data.len() <= index {
-            self.data.push(None);
-            self.sparse_to_dense.push(Sparse {
-                dense: 0,
-                generation: 0,
-            });
-        }
-        let dense = self.dense_to_sparse.len();
-        self.data[index] = Some(element);
-        self.sparse_to_dense[index].put(dense as u32);
-        self.dense_to_sparse.push(Dense {
-            sparse: index as u32,
-        });
-
-        Ok(())
-    }
-
     pub fn remove(&mut self, id: Id<T>) -> Option<T> {
         if let Some(&Sparse { dense, generation }) = self.sparse_to_dense.get(id.index as usize) {
             if id.generation == generation {
@@ -228,6 +200,7 @@ mod id {
 mod serialization {
     use std::fmt::Display;
 
+    use druid::im::HashSet;
     use serde::{
         de::{self, Visitor},
         Deserialize, Deserializer, Serialize, Serializer,
@@ -279,6 +252,49 @@ mod serialization {
         }
     }
 
+    struct DeserializationBuilder<T> {
+        set: SparseSet<T>,
+        unused_sparse_indices: HashSet<u32>,
+    }
+
+    impl<T> DeserializationBuilder<T> {
+        fn insert_at_sparse_index(&mut self, index: u32, element: T) -> Result<(), OverlappingId> {
+            if let Some(Some(_)) = self.set.data.get(index as usize) {
+                return Err(OverlappingId(index));
+            }
+
+            let index = index as usize;
+            while self.set.data.len() <= index {
+                let new_sparse_index = self.set.data.len() as u32;
+                self.unused_sparse_indices.insert(new_sparse_index);
+                self.set.data.push(None);
+                self.set.sparse_to_dense.push(Sparse {
+                    dense: 0,
+                    generation: 0,
+                });
+                self.set.next_free_id += 1;
+            }
+            let dense = self.set.dense_to_sparse.len();
+            self.set.data[index] = Some(element);
+            self.set.sparse_to_dense[index].put(dense as u32);
+            let index = index as u32;
+            self.set.dense_to_sparse.push(Dense { sparse: index });
+            self.unused_sparse_indices.remove(&index);
+
+            Ok(())
+        }
+
+        fn finish(mut self) -> SparseSet<T> {
+            self.set
+                .free_sparse_indices
+                .reserve_exact(self.unused_sparse_indices.len());
+            self.set
+                .free_sparse_indices
+                .extend(self.unused_sparse_indices.into_iter());
+            self.set
+        }
+    }
+
     impl<'de, T> Deserialize<'de> for SparseSet<T>
     where
         T: Deserialize<'de>,
@@ -312,12 +328,16 @@ mod serialization {
                         element: T,
                     }
 
-                    let mut set = SparseSet::new();
+                    let mut builder = DeserializationBuilder {
+                        set: SparseSet::new(),
+                        unused_sparse_indices: HashSet::new(),
+                    };
                     while let Some(Intermediate { id, element }) = seq.next_element()? {
-                        set.insert_at_sparse_index(id.index, element)
+                        builder
+                            .insert_at_sparse_index(id.index, element)
                             .map_err(de::Error::custom)?;
                     }
-                    Ok(set)
+                    Ok(builder.finish())
                 }
             }
 
