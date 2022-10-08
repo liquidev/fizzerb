@@ -8,6 +8,11 @@ pub struct Transform {
 }
 
 impl Transform {
+    /// Pans the viewport transform by the given amount.
+    pub fn pan_by(&mut self, delta: Vec2) {
+        self.pan -= delta / self.zoom();
+    }
+
     /// Returns the zoom amount, calculated from the zoom level.
     pub fn zoom(&self) -> f64 {
         f64::powf(2.0, self.zoom_level * 0.25)

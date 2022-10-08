@@ -9,7 +9,7 @@ use druid::{
     kurbo::{Circle, Line},
     piet::{LineCap, StrokeStyle},
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, RenderContext, Size, UpdateCtx, Widget,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget,
 };
 use serde::{Deserialize, Serialize};
 
@@ -44,12 +44,18 @@ impl SpaceEditorProjectData {
 }
 
 pub struct SpaceEditor {
+    panning: bool,
+    previous_mouse_pos: Point,
+
     tool: Box<dyn ToolImpl>,
 }
 
 impl SpaceEditor {
     pub fn new() -> Self {
         Self {
+            panning: false,
+            previous_mouse_pos: Point::ZERO,
+
             tool: Tool::default().get_impl(),
         }
     }
@@ -69,7 +75,32 @@ impl Widget<SpaceEditorProjectData> for SpaceEditor {
     ) {
         let viewport_size = ctx.size();
         let viewport_space_event = data.transform.mouse_to_viewport_space(event, viewport_size);
-        self.tool.event(ctx, &viewport_space_event, data, env);
+
+        match event {
+            Event::MouseDown(mouse) if mouse.button.is_middle() => {
+                self.panning = true;
+                ctx.set_handled();
+                ctx.set_active(true);
+            }
+            Event::MouseUp(mouse) if mouse.button.is_middle() => {
+                self.panning = false;
+                ctx.set_active(false);
+            }
+            Event::MouseMove(mouse) if self.panning => {
+                let delta = mouse.pos - self.previous_mouse_pos;
+                data.transform.pan_by(delta);
+                ctx.request_paint();
+            }
+            _ => (),
+        }
+
+        if !ctx.is_handled() {
+            self.tool.event(ctx, &viewport_space_event, data, env);
+        }
+
+        if let Event::MouseMove(mouse) = event {
+            self.previous_mouse_pos = mouse.pos;
+        }
     }
 
     fn lifecycle(
@@ -114,6 +145,7 @@ impl Widget<SpaceEditorProjectData> for SpaceEditor {
         ctx.with_save(|ctx| {
             ctx.transform(Affine::translate(bounds.center().to_vec2()));
             ctx.transform(Affine::scale(data.transform.zoom()));
+            ctx.transform(Affine::translate(-data.transform.pan));
 
             for object in &data.space.objects {
                 match object {

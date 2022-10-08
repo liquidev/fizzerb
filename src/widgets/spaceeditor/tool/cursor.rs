@@ -193,6 +193,7 @@ impl ToolImpl for CursorTool {
                         ctx.set_active(true);
                         ctx.request_paint();
                     }
+                    ctx.set_handled();
                 }
             }
 
