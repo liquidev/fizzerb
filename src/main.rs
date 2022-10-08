@@ -21,6 +21,7 @@ mod style;
 mod math;
 mod project;
 mod rendering;
+mod sparse_set;
 mod widgets;
 
 #[derive(Clone, Data, Lens)]
