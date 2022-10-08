@@ -20,7 +20,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
     Idle,
-    DraggingEntireFocusedObject,
+    Dragging,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -189,7 +189,7 @@ impl ToolImpl for CursorTool {
                 if mouse.button.is_left() {
                     self.focused_state = self.hot_state;
                     if self.hot_state.is_some() {
-                        self.state = State::DraggingEntireFocusedObject;
+                        self.state = State::Dragging;
                         ctx.set_active(true);
                         ctx.request_paint();
                     }
@@ -197,7 +197,7 @@ impl ToolImpl for CursorTool {
                 }
             }
 
-            (State::DraggingEntireFocusedObject, Event::MouseMove(mouse)) => {
+            (State::Dragging, Event::MouseMove(mouse)) => {
                 if let Some(HotState { object, part }) = self.focused_state {
                     let object = &mut data.edit_space().objects[object];
                     let delta = mouse.pos - self.last_mouse_pos;
