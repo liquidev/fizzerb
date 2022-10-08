@@ -3,7 +3,7 @@ use druid::{
     piet::{LineCap, StrokeStyle},
     Color, Env, Event, EventCtx, PaintCtx, Point, RenderContext, Vec2,
 };
-use spaceeditor::{
+use space_editor::{
     data::{Microphone, Speaker, Wall},
     transform::Transform,
 };
@@ -13,7 +13,7 @@ use crate::{
     math::PointExtHitTests,
     widgets::{
         data::{EditableSpace, Object},
-        spaceeditor, SpaceEditorProjectData,
+        space_editor, SpaceEditorProjectData,
     },
 };
 
@@ -281,9 +281,9 @@ struct CachedObjectParams {
 impl CachedObjectParams {
     fn from_env_and_transform(env: &Env, transform: &Transform) -> Self {
         Self {
-            microphone_radius: env.get(spaceeditor::style::MICROPHONE_RADIUS),
-            speaker_radius: env.get(spaceeditor::style::SPEAKER_RADIUS),
-            wall_thickness: env.get(spaceeditor::style::WALL_THICKNESS) / transform.zoom() * 16.0,
+            microphone_radius: env.get(space_editor::style::MICROPHONE_RADIUS),
+            speaker_radius: env.get(space_editor::style::SPEAKER_RADIUS),
+            wall_thickness: env.get(space_editor::style::WALL_THICKNESS) / transform.zoom() * 16.0,
             handle_radius: env.get(style::HOT_HANDLE_OUTER_RADIUS) / transform.zoom() * 2.0,
         }
     }
@@ -359,7 +359,7 @@ fn paint_object_outline(
 pub mod style {
     use druid::{Color, Env, Key};
 
-    use crate::{style::color, widgets::spaceeditor};
+    use crate::{style::color, widgets::space_editor};
 
     pub const PRIMARY_SELECTION_COLOR: Key<Color> =
         style_key!("tool.cursor.selection.primary-color");
@@ -391,11 +391,11 @@ pub mod style {
         env.set(HOT_FOCUSED_OUTLINE_THICKNESS, 6.0);
         env.set(
             MICROPHONE_RADIUS,
-            env.get(spaceeditor::style::MICROPHONE_RADIUS) * 1.4,
+            env.get(space_editor::style::MICROPHONE_RADIUS) * 1.4,
         );
         env.set(
             SPEAKER_RADIUS,
-            env.get(spaceeditor::style::SPEAKER_RADIUS) * 1.4,
+            env.get(space_editor::style::SPEAKER_RADIUS) * 1.4,
         );
 
         env.set(IDLE_HANDLE_INNER_RADIUS, 4.0);

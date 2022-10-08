@@ -1,5 +1,5 @@
 pub mod button;
-pub mod spaceeditor;
+pub mod space_editor;
 
 pub use button::*;
-pub use spaceeditor::*;
+pub use space_editor::*;

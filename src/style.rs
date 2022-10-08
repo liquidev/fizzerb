@@ -36,7 +36,7 @@ pub fn configure_env(env: &mut Env) -> Result<(), Error> {
     env.set(WINDOW_PADDING, 16.0);
 
     widgets::button::style::configure_env(env);
-    widgets::spaceeditor::style::configure_env(env);
+    widgets::space_editor::style::configure_env(env);
 
     Ok(())
 }
