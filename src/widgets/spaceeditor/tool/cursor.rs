@@ -271,6 +271,24 @@ impl ToolImpl for CursorTool {
     }
 }
 
+struct CachedObjectParams {
+    microphone_radius: f64,
+    speaker_radius: f64,
+    wall_thickness: f64,
+    handle_radius: f64,
+}
+
+impl CachedObjectParams {
+    fn from_env_and_transform(env: &Env, transform: &Transform) -> Self {
+        Self {
+            microphone_radius: env.get(spaceeditor::style::MICROPHONE_RADIUS),
+            speaker_radius: env.get(spaceeditor::style::SPEAKER_RADIUS),
+            wall_thickness: env.get(spaceeditor::style::WALL_THICKNESS) / transform.zoom() * 16.0,
+            handle_radius: env.get(style::HOT_HANDLE_OUTER_RADIUS) / transform.zoom() * 2.0,
+        }
+    }
+}
+
 fn paint_object_handle(
     ctx: &mut PaintCtx,
     env: &Env,
@@ -334,24 +352,6 @@ fn paint_object_outline(
                 thickness,
                 &stroke_style,
             );
-        }
-    }
-}
-
-struct CachedObjectParams {
-    microphone_radius: f64,
-    speaker_radius: f64,
-    wall_thickness: f64,
-    handle_radius: f64,
-}
-
-impl CachedObjectParams {
-    fn from_env_and_transform(env: &Env, transform: &Transform) -> Self {
-        Self {
-            microphone_radius: env.get(spaceeditor::style::MICROPHONE_RADIUS),
-            speaker_radius: env.get(spaceeditor::style::SPEAKER_RADIUS),
-            wall_thickness: env.get(spaceeditor::style::WALL_THICKNESS) * 0.5,
-            handle_radius: env.get(style::HOT_HANDLE_OUTER_RADIUS) / transform.zoom() * 2.0,
         }
     }
 }

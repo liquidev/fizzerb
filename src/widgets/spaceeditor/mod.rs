@@ -9,7 +9,7 @@ use druid::{
     kurbo::{Circle, Line},
     piet::{LineCap, StrokeStyle},
     Affine, BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, RenderContext, Size, UpdateCtx, Vec2, Widget,
+    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget,
 };
 use serde::{Deserialize, Serialize};
 
@@ -89,6 +89,11 @@ impl Widget<SpaceEditorProjectData> for SpaceEditor {
             Event::MouseMove(mouse) if self.panning => {
                 let delta = mouse.pos - self.previous_mouse_pos;
                 data.transform.pan_by(delta);
+                ctx.request_paint();
+            }
+            Event::Wheel(mouse) => {
+                let delta = -mouse.wheel_delta.y.signum();
+                data.transform.zoom_level += delta;
                 ctx.request_paint();
             }
             _ => (),
