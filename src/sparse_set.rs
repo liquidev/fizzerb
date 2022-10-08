@@ -19,6 +19,7 @@ impl<T> Id<T> {
     }
 }
 
+#[derive(Clone)]
 pub struct SparseSet<T> {
     data: Vec<Option<T>>,
     sparse_to_dense: Vec<Sparse>,
@@ -122,15 +123,25 @@ impl<T> SparseSet<T> {
         None
     }
 
-    pub fn ids(&self) -> impl Iterator<Item = Id<T>> + '_ {
-        self.dense_to_sparse.iter().map(|&Dense { sparse: index }| {
-            let generation = self.sparse_to_dense[index as usize].generation;
-            Id::new(index, generation)
-        })
+    pub fn ids(&self) -> Ids<'_, T> {
+        Ids {
+            set: self,
+            dense: self.dense_to_sparse.iter(),
+        }
     }
 
-    pub fn pairs(&self) -> impl Iterator<Item = (Id<T>, &T)> + '_ {
-        self.ids().map(|id| (id, &self[id]))
+    pub fn pairs(&self) -> Pairs<'_, T> {
+        Pairs {
+            set: self,
+            ids: self.ids(),
+        }
+    }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            set: self,
+            dense: self.dense_to_sparse.iter(),
+        }
     }
 
     /// Find and allocate a free sparse and dense index pair.
@@ -322,5 +333,61 @@ mod serialization {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "set contains elements with duplicate IDs ({})", self.0)
         }
+    }
+}
+
+pub struct Ids<'a, T> {
+    set: &'a SparseSet<T>,
+    dense: std::slice::Iter<'a, Dense>,
+}
+
+impl<'a, T> Iterator for Ids<'a, T> {
+    type Item = Id<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.dense.next().map(|&Dense { sparse: index }| {
+            let generation = self.set.sparse_to_dense[index as usize].generation;
+            Id::new(index, generation)
+        })
+    }
+}
+
+pub struct Pairs<'a, T> {
+    set: &'a SparseSet<T>,
+    ids: Ids<'a, T>,
+}
+
+impl<'a, T> Iterator for Pairs<'a, T> {
+    type Item = (Id<T>, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ids
+            .next()
+            .map(|id| (id, self.set.data[id.index as usize].as_ref().unwrap()))
+    }
+}
+
+pub struct Iter<'a, T> {
+    set: &'a SparseSet<T>,
+    dense: std::slice::Iter<'a, Dense>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.dense
+            .next()
+            .map(|&Dense { sparse: index }| self.set.data[index as usize].as_ref().unwrap())
+    }
+}
+
+impl<'a, T> IntoIterator for &'a SparseSet<T> {
+    type Item = &'a T;
+
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
