@@ -185,12 +185,14 @@ impl ToolImpl for CursorTool {
                     ctx.request_paint();
                 }
             }
-            (State::Idle, Event::MouseDown(_)) => {
-                self.focused_state = self.hot_state;
-                if self.hot_state.is_some() {
-                    self.state = State::DraggingEntireFocusedObject;
-                    ctx.set_active(true);
-                    ctx.request_paint();
+            (State::Idle, Event::MouseDown(mouse)) => {
+                if mouse.button.is_left() {
+                    self.focused_state = self.hot_state;
+                    if self.hot_state.is_some() {
+                        self.state = State::DraggingEntireFocusedObject;
+                        ctx.set_active(true);
+                        ctx.request_paint();
+                    }
                 }
             }
 
