@@ -145,26 +145,6 @@ impl Sparse {
     }
 }
 
-impl<T> Index<Id<T>> for SparseSet<T> {
-    type Output = T;
-
-    fn index(&self, id: Id<T>) -> &Self::Output {
-        match self.get(id) {
-            Some(element) => element,
-            None => panic!("element {id:?} was removed and isn't in the set anymore"),
-        }
-    }
-}
-
-impl<T> IndexMut<Id<T>> for SparseSet<T> {
-    fn index_mut(&mut self, id: Id<T>) -> &mut Self::Output {
-        match self.get_mut(id) {
-            Some(element) => element,
-            None => panic!("element {id:?} was removed and isn't in the set anymore"),
-        }
-    }
-}
-
 mod id {
     use std::fmt::Debug;
 

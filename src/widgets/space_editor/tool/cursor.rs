@@ -73,10 +73,11 @@ impl CursorTool {
         self.hot_state = None;
 
         // Prioritize the focused object, then try other objects.
-        if let Some(HotState { object: index, .. }) = self.focused_state {
-            let object = &space.objects[index];
-            if self.check_object_hotness(object, index, position, object_params) {
-                return;
+        if let Some(HotState { object: id, .. }) = self.focused_state {
+            if let Some(object) = space.objects.get(id) {
+                if self.check_object_hotness(object, id, position, object_params) {
+                    return;
+                }
             }
         }
 
@@ -93,7 +94,7 @@ impl CursorTool {
     fn check_object_hotness(
         &mut self,
         object: &Object,
-        object_index: Id<Object>,
+        object_id: Id<Object>,
         position: Point,
         object_params: &CachedObjectParams,
     ) -> bool {
@@ -110,7 +111,7 @@ impl CursorTool {
                 };
                 if let Some(part) = hot_part {
                     self.hot_state = Some(HotState {
-                        object: object_index,
+                        object: object_id,
                         part,
                     });
                     return true;
@@ -121,7 +122,7 @@ impl CursorTool {
                     position.in_circle(microphone.position, object_params.microphone_radius);
                 if is_hot {
                     self.hot_state = Some(HotState {
-                        object: object_index,
+                        object: object_id,
                         part: HotPart::EntireObject,
                     });
                     return true;
@@ -131,7 +132,7 @@ impl CursorTool {
                 let is_hot = position.in_circle(speaker.position, object_params.speaker_radius);
                 if is_hot {
                     self.hot_state = Some(HotState {
-                        object: object_index,
+                        object: object_id,
                         part: HotPart::EntireObject,
                     });
                     return true;
@@ -199,10 +200,11 @@ impl ToolImpl for CursorTool {
 
             (State::Dragging, Event::MouseMove(mouse)) => {
                 if let Some(HotState { object, part }) = self.focused_state {
-                    let object = &mut data.edit_space().objects[object];
-                    let delta = mouse.pos - self.last_mouse_pos;
-                    self.drag_entire_object(object, part, delta);
-                    ctx.request_paint();
+                    if let Some(object) = data.edit_space().objects.get_mut(object) {
+                        let delta = mouse.pos - self.last_mouse_pos;
+                        self.drag_entire_object(object, part, delta);
+                        ctx.request_paint();
+                    }
                 }
             }
 
@@ -226,46 +228,53 @@ impl ToolImpl for CursorTool {
         let secondary_color = env.get(style::SECONDARY_SELECTION_COLOR);
 
         if let Some(HotState {
-            object: object_index,
-            ..
+            object: object_id, ..
         }) = self.focused_state
         {
-            let object = &data.space.objects[object_index];
+            if let Some(object) = data.space.objects.get(object_id) {
+                let thickness = if self.object_part_is_hot(object_id, HotPart::EntireObject) {
+                    env.get(style::HOT_FOCUSED_OUTLINE_THICKNESS)
+                } else {
+                    env.get(style::FOCUSED_OUTLINE_THICKNESS)
+                };
+                paint_object_outline(ctx, env, &data.transform, viewport_size, object, thickness);
 
-            let thickness = if self.object_part_is_hot(object_index, HotPart::EntireObject) {
-                env.get(style::HOT_FOCUSED_OUTLINE_THICKNESS)
-            } else {
-                env.get(style::FOCUSED_OUTLINE_THICKNESS)
-            };
-            paint_object_outline(ctx, env, &data.transform, viewport_size, object, thickness);
-
-            if let &Object::Wall(Wall { start, end, .. }) = object {
-                let start = data.transform.to_screen_space(start, viewport_size);
-                let end = data.transform.to_screen_space(end, viewport_size);
-                paint_object_handle(
-                    ctx,
-                    env,
-                    start,
-                    &primary_color,
-                    &secondary_color,
-                    self.object_part_is_hot(object_index, HotPart::WallStart),
-                );
-                paint_object_handle(
-                    ctx,
-                    env,
-                    end,
-                    &primary_color,
-                    &secondary_color,
-                    self.object_part_is_hot(object_index, HotPart::WallEnd),
-                );
+                if let &Object::Wall(Wall { start, end, .. }) = object {
+                    let start = data.transform.to_screen_space(start, viewport_size);
+                    let end = data.transform.to_screen_space(end, viewport_size);
+                    paint_object_handle(
+                        ctx,
+                        env,
+                        start,
+                        &primary_color,
+                        &secondary_color,
+                        self.object_part_is_hot(object_id, HotPart::WallStart),
+                    );
+                    paint_object_handle(
+                        ctx,
+                        env,
+                        end,
+                        &primary_color,
+                        &secondary_color,
+                        self.object_part_is_hot(object_id, HotPart::WallEnd),
+                    );
+                }
             }
         }
 
         if let Some(HotState { object, .. }) = self.hot_state {
             if !self.focused_object_is_hot() {
-                let object = &data.space.objects[object];
-                let thickness = env.get(style::HOT_OUTLINE_THICKNESS);
-                paint_object_outline(ctx, env, &data.transform, viewport_size, object, thickness);
+                if let Some(object) = data.space.objects.get(object) {
+                    let thickness = env.get(style::HOT_OUTLINE_THICKNESS);
+                    paint_object_outline(
+                        ctx,
+                        env,
+                        &data.transform,
+                        viewport_size,
+                        object,
+                        thickness,
+                    );
+                }
             }
         }
     }
