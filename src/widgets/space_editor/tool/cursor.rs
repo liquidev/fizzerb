@@ -7,6 +7,7 @@ use space_editor::{
     data::{Microphone, Speaker, Wall},
     transform::Transform,
 };
+use tracing::info;
 
 use super::ToolImpl;
 use crate::{
@@ -176,6 +177,7 @@ impl CursorTool {
     ) {
         if command.is(commands::DELETE) {
             if let Some(HotState { object, .. }) = self.focused_state {
+                info!(?object, "delete");
                 data.edit_space().objects.remove(object);
                 ctx.request_paint();
             }
