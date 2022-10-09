@@ -1,7 +1,7 @@
 use druid::{
     kurbo::{Circle, Line},
     piet::{LineCap, StrokeStyle},
-    Color, Env, Event, EventCtx, PaintCtx, Point, RenderContext, Vec2,
+    Color, Command, Env, Event, EventCtx, PaintCtx, Point, RenderContext, Vec2,
 };
 use space_editor::{
     data::{Microphone, Speaker, Wall},
@@ -10,6 +10,7 @@ use space_editor::{
 
 use super::ToolImpl;
 use crate::{
+    commands,
     math::PointExtHitTests,
     sparse_set::Id,
     widgets::{
@@ -166,6 +167,23 @@ impl CursorTool {
             .map(|s| s.object == object_id && s.part == part)
             .unwrap_or(false)
     }
+
+    fn command(
+        &mut self,
+        ctx: &mut EventCtx,
+        data: &mut SpaceEditorProjectData,
+        command: &Command,
+    ) {
+        if command.is(commands::DELETE) {
+            if let Some(HotState { object, .. }) = self.focused_state {
+                data.edit_space().objects.remove(object);
+                ctx.request_paint();
+            }
+        } else {
+            return;
+        }
+        ctx.set_handled();
+    }
 }
 
 impl ToolImpl for CursorTool {
@@ -213,6 +231,8 @@ impl ToolImpl for CursorTool {
                 ctx.set_active(false);
                 ctx.request_paint();
             }
+
+            (_, Event::Command(command)) => self.command(ctx, data, command),
 
             _ => (),
         }

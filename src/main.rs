@@ -3,6 +3,7 @@
 use std::{path::PathBuf, sync::Arc, thread};
 
 use clap::Parser;
+use commands::commander;
 use druid::{
     widget::{Flex, Padding, ZStack},
     AppLauncher, Data, Lens, UnitPoint, Widget, WidgetExt, WindowDesc,
@@ -15,9 +16,12 @@ use widgets::{Button, SpaceEditor};
 
 use crate::error::Error;
 
-mod error;
 #[macro_use]
 mod style;
+#[macro_use]
+mod commands;
+
+mod error;
 mod math;
 mod project;
 mod rendering;
@@ -40,10 +44,11 @@ fn root() -> impl Widget<RootData> {
         .lens(RootData::project);
     let bottom_right = Flex::row().with_child(render_button);
 
-    ZStack::new(space_editor).with_aligned_child(
+    let stack = ZStack::new(space_editor).with_aligned_child(
         Padding::new(style::WINDOW_PADDING, bottom_right),
         UnitPoint::BOTTOM_RIGHT,
-    )
+    );
+    commander(stack)
 }
 
 #[derive(Parser)]
