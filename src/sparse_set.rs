@@ -65,6 +65,12 @@ impl<T> SparseSet<T> {
 
                 let element = self.data[id.index as usize].take();
                 self.sparse_to_dense[id.index as usize].next_generation();
+                if let Some(&Dense {
+                    sparse: swapped_index,
+                }) = self.dense_to_sparse.last()
+                {
+                    self.sparse_to_dense[swapped_index as usize].dense = id.index;
+                }
                 self.dense_to_sparse.swap_remove(dense_index);
                 self.free_sparse_indices.push(id.index);
 
