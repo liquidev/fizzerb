@@ -1,6 +1,5 @@
 mod ray;
 mod response;
-mod rng;
 mod tracer;
 
 pub use ray::*;
