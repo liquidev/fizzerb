@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{math::DruidExtToGlam, sparse_set::SparseSet};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Data, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Data, Deserialize, Serialize)]
 pub struct MaterialIndex(usize);
 
 #[derive(Debug, Clone, PartialEq, Data, Deserialize, Serialize)]

@@ -52,9 +52,9 @@ impl<T> SparseSet<T> {
         let (sparse_index, dense_index) = self.allocate_free_indices();
         self.data[sparse_index as usize] = Some(element);
         let generation = self.sparse_to_dense[sparse_index as usize].put(dense_index);
-        self.dense_to_sparse[dense_index as usize] = Dense {
+        self.dense_to_sparse.push(Dense {
             sparse: sparse_index,
-        };
+        });
         Id::new(sparse_index, generation)
     }
 
@@ -125,6 +125,7 @@ impl<T> SparseSet<T> {
             self.free_sparse_indices.pop().unwrap_or_else(|| {
                 let i = self.next_free_id;
                 self.next_free_id += 1;
+                self.data.push(None);
                 self.sparse_to_dense.push(Sparse {
                     dense: 0,
                     generation: 0,

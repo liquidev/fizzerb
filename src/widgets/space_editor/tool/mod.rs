@@ -1,9 +1,10 @@
 mod cursor;
+mod wall;
 
 use druid::{Data, Env, Event, EventCtx, PaintCtx};
 use serde::{Deserialize, Serialize};
 
-use self::cursor::CursorTool;
+use self::{cursor::CursorTool, wall::WallTool};
 use super::SpaceEditorProjectData;
 
 pub trait ToolImpl {
@@ -22,12 +23,14 @@ pub trait ToolImpl {
 pub enum Tool {
     #[default]
     Cursor,
+    Wall,
 }
 
 impl Tool {
     pub fn get_impl(self) -> Box<dyn ToolImpl> {
         match self {
             Tool::Cursor => Box::new(CursorTool::new()),
+            Tool::Wall => Box::new(WallTool::new()),
         }
     }
 }
@@ -35,9 +38,10 @@ impl Tool {
 pub mod style {
     use druid::Env;
 
-    use super::cursor;
+    use super::*;
 
     pub fn configure_env(env: &mut Env) {
         cursor::style::configure_env(env);
+        wall::style::configure_env(env);
     }
 }
