@@ -1,7 +1,4 @@
-use std::{
-    marker::PhantomData,
-    ops::{Index, IndexMut},
-};
+use std::marker::PhantomData;
 
 pub struct Id<T> {
     index: u32,
