@@ -69,7 +69,7 @@ impl<T> SparseSet<T> {
                     sparse: swapped_index,
                 }) = self.dense_to_sparse.last()
                 {
-                    self.sparse_to_dense[swapped_index as usize].dense = id.index;
+                    self.sparse_to_dense[swapped_index as usize].dense = dense_index as u32;
                 }
                 self.dense_to_sparse.swap_remove(dense_index);
                 self.free_sparse_indices.push(id.index);
