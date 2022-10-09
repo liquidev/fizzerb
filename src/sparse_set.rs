@@ -208,28 +208,27 @@ mod serialization {
 
     use super::*;
 
-    /// Serializing an ID loses its generation, because all serialized sparse sets use generation 0.
     impl<T> Serialize for Id<T> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            u32::serialize(&self.index, serializer)
+            <(u32, u32)>::serialize(&(self.index, self.generation), serializer)
         }
     }
 
-    /// Deserializing an ID results in generation 0, because all serialized sparse sets use that.
     impl<'de, T> Deserialize<'de> for Id<T> {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            Ok(Self::new(u32::deserialize(deserializer)?, 0))
+            let (index, generation) = <(u32, u32)>::deserialize(deserializer)?;
+            Ok(Self::new(index, generation))
         }
     }
 
     /// Serializing a sparse set loses generations from its elements. Each element is serialized
-    /// as a struct with an added field `{ "id": 0 }`.
+    /// as a struct with an added field `{"id": [0, 0]}`.
     impl<T> Serialize for SparseSet<T>
     where
         T: Serialize,
@@ -258,12 +257,12 @@ mod serialization {
     }
 
     impl<T> DeserializationBuilder<T> {
-        fn insert_at_sparse_index(&mut self, index: u32, element: T) -> Result<(), OverlappingId> {
-            if let Some(Some(_)) = self.set.data.get(index as usize) {
-                return Err(OverlappingId(index));
+        fn insert_at_id(&mut self, id: Id<T>, element: T) -> Result<(), OverlappingId> {
+            if let Some(Some(_)) = self.set.data.get(id.index as usize) {
+                return Err(OverlappingId(id.index));
             }
 
-            let index = index as usize;
+            let index = id.index as usize;
             while self.set.data.len() <= index {
                 let new_sparse_index = self.set.data.len() as u32;
                 self.unused_sparse_indices.insert(new_sparse_index);
@@ -276,7 +275,10 @@ mod serialization {
             }
             let dense = self.set.dense_to_sparse.len();
             self.set.data[index] = Some(element);
-            self.set.sparse_to_dense[index].put(dense as u32);
+            self.set.sparse_to_dense[index] = Sparse {
+                dense: dense as u32,
+                generation: id.generation,
+            };
             let index = index as u32;
             self.set.dense_to_sparse.push(Dense { sparse: index });
             self.unused_sparse_indices.remove(&index);
@@ -334,7 +336,7 @@ mod serialization {
                     };
                     while let Some(Intermediate { id, element }) = seq.next_element()? {
                         builder
-                            .insert_at_sparse_index(id.index, element)
+                            .insert_at_id(id, element)
                             .map_err(de::Error::custom)?;
                     }
                     Ok(builder.finish())
